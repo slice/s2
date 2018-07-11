@@ -1,5 +1,5 @@
 import discord
-from lifesaver.bot import Cog, command, Context
+from lifesaver.bot import Cog, Context, command
 
 
 class Perms(Cog):
