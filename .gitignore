@@ -1,0 +1,8 @@
+.idea
+.vscode
+
+/config.yml
+.mypy_cache
+__pycache__
+*.pyc
+/insects.json
