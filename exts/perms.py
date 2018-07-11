@@ -18,7 +18,7 @@ class Perms(Cog):
             value = getattr(perms, perm, None)
             if not isinstance(value, bool):
                 continue
-            title = perm.replace("_", " ").title()
+            title = perm.replace("_", " ").title().replace("Tts", "TTS")
             if value:
                 allowed.append(title)
             else:
