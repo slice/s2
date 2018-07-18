@@ -81,7 +81,10 @@ class LastFM(Cog):
                 inline=False,
             )
 
-        embed.add_field(name='Recently Played Tracks', value=tracks)
+        embed.add_field(
+            name='Recently Played Tracks',
+            value=tracks or 'No tracks scrobbled.'
+        )
         await ctx.send(embed=embed)
 
     @last_fm_command.command(aliases=['fav', 'favs'], typing=True)
