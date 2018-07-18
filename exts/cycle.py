@@ -9,6 +9,7 @@ PLAYING_STATUSES = [
     (ActivityType.listening, "rain"),
     (ActivityType.watching, "e621"),
     (ActivityType.playing, "with elixir"),
+    (ActivityType.playing, "with python"),
 ]
 
 
