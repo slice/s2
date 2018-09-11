@@ -10,9 +10,10 @@ def humanize_perm(perm: str) -> str:
 
 
 class Perms(Cog):
-    @command()
+    @command(typing=True)
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
+    @commands.cooldown(1, 5, type=commands.BucketType.guild)
     async def role_lint(self, ctx: Context):
         """Shows roles with unnecessary permissions."""
         reports = []
