@@ -1,0 +1,3 @@
+git+https://github.com/slice/lifesaver
+pylast==2.3.0
+uvloop
