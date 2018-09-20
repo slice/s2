@@ -35,7 +35,7 @@ class Perms(Cog):
             output += '[{}] {}\n'.format(report['type'].upper(), report['message'])
 
         link = await upload(output)
-        await ctx.send(f'Linted. {len(reports)} report(s). {link}')
+        await ctx.send(f'linted: {len(reports)} report(s). {link}')
 
     @command()
     @commands.guild_only()
@@ -59,8 +59,8 @@ class Perms(Cog):
             else:
                 denied.append(title)
 
-        embed.add_field(name="Allowed", value="\n".join(allowed) or "<none>")
-        embed.add_field(name="Denied", value="\n".join(denied) or "<none>")
+        embed.add_field(name="allowed", value="\n".join(allowed) or "<none>")
+        embed.add_field(name="denied", value="\n".join(denied) or "<none>")
 
         await ctx.send(embed=embed)
 
