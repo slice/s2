@@ -10,6 +10,19 @@ def humanize_perm(perm: str) -> str:
 
 
 class Perms(Cog):
+    @command(aliases=['flatten_roles'])
+    @commands.has_permissions(manage_roles=True)
+    @commands.guild_only()
+    async def flatten_role(self, ctx: Context, *roles: discord.Role):
+        """Empties a role's permissions."""
+        for role in roles:
+            try:
+                await role.edit(permissions=discord.Permissions.none())
+                ctx += f'\N{MEMO} flattened {role.name}'
+            except discord.HTTPException as err:
+                ctx += f'\N{LOCK WITH INK PEN} unable to flatten {role.name}: {err}'
+        await ctx.send_pages()
+
     @command(typing=True)
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
