@@ -49,6 +49,7 @@ class LastFM(Cog):
         }
 
     @group(name='last_fm', aliases=['lfm', 'last.fm'], typing=True, invoke_without_command=True)
+    @commands.cooldown(1, 3, commands.BucketType.user)
     async def last_fm_command(self, ctx, user: LastFMUser):
         """Shows last.fm info."""
 
@@ -88,6 +89,7 @@ class LastFM(Cog):
         await ctx.send(embed=embed)
 
     @last_fm_command.command(aliases=['fav', 'favs'], typing=True)
+    @commands.cooldown(1, 3, commands.BucketType.user)
     async def favorites(self, ctx, user: LastFMUser):
         """Shows a user's favorite tracks."""
 
