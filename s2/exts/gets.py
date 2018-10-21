@@ -148,8 +148,10 @@ class Gets(Cog):
         log.debug('committed get for %s', msg)
 
     async def on_message(self, msg):
-        if (msg.webhook_id in self.webhooks and msg.channel.id in self.channels) or \
-                (self.debug_mode and msg.content == '.get'):
+        if msg.channel.id not in self.channels:
+            return
+
+        if msg.webhook_id in self.webhooks:
             self.pending_get = msg
             return
 
