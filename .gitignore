@@ -1,6 +1,7 @@
 .idea
 .vscode
 
+QuickLook
 .DS_Store
 venv
 .mypy_cache
