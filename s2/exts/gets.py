@@ -9,14 +9,13 @@ from lifesaver.utils import human_delta
 log = logging.getLogger(__name__)
 
 GAME_INFO = """A message sent directly after a build notification is a **GET.**
+(GETs are only counted when they are in the same channel as the build notification.)
 
-The total amount of GETs you collect are tallied, which helps determine your **rank.**
-(To see rank information, type `{prefix}gets ranks`.)
+The total amount of GETs you collect determine your **rank.**
+(To see the list of ranks, type `{prefix}gets ranks`.)
 
-To see your total amount of GETs and other information about yourself, type `{prefix}gets profile`.
+To see your total amount of GETs and other information about yourself like your rank, type `{prefix}gets profile`.
 You can also use this command to view other people's profiles.
-
-Don't ask why.
 """
 
 RANK_COLORS = [
