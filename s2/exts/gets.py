@@ -69,7 +69,7 @@ def get_rank(n_gets: int) -> int:
 class Gets(Cog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.pending_get = None
+        self.pending_gets = {}
 
     @property
     def channels(self):
@@ -111,10 +111,12 @@ class Gets(Cog):
             WHERE user_id = ?
         """, [datetime.datetime.utcnow(), msg.author.id])
 
+        pending_get = self.pending_gets[msg.channel.id]
+
         await self.bot.db.execute("""
             INSERT INTO voyager_gets (user_id, get_message_id, voyager_message_id, channel_id, guild_id)
             VALUES (?, ?, ?, ?, ?)
-        """, [msg.author.id, msg.id, self.pending_get.id, msg.channel.id, msg.guild.id])
+        """, [msg.author.id, msg.id, pending_get.id, msg.channel.id, msg.guild.id])
 
         past_rank = account[2]
         now_gets = account[1] + 1
@@ -152,15 +154,15 @@ class Gets(Cog):
             return
 
         if msg.webhook_id in self.webhooks:
-            self.pending_get = msg
+            self.pending_gets[msg.channel.id] = msg
             return
 
-        if msg.author.bot or self.pending_get is None:
+        if msg.author.bot or msg.channel.id not in self.pending_gets:
             return
 
         await self.commit_get(msg)
 
-        self.pending_get = None
+        del self.pending_gets[msg.channel.id]
 
     @group()
     @commands.check(get_channel)
