@@ -4,7 +4,7 @@ import logging
 import discord
 from discord.ext import commands
 from lifesaver.bot import Cog, group
-from lifesaver.utils import human_delta
+from lifesaver.utils import human_delta, Table, codeblock
 
 log = logging.getLogger(__name__)
 
@@ -171,7 +171,20 @@ class Gets(Cog):
     @gets.command()
     async def top(self, ctx):
         """Shows top getters"""
-        await ctx.send('todo')
+        table = Table('User', 'Total GETs', 'Rank')
+
+        async with ctx.bot.db.execute("""
+            SELECT * FROM voyager_stats
+            ORDER BY total_gets DESC
+            LIMIT 10
+        """) as cur:
+            async for row in cur:
+                user = ctx.bot.get_user(row[0])
+                if not user:
+                    user = '???'
+                table.add_row(str(user), str(row[1]), str(row[2]))
+
+        await ctx.send(codeblock(await table.render(ctx.bot.loop)))
 
     @gets.command(aliases=['stats', 'info'])
     async def profile(self, ctx, target: discord.Member = None):
