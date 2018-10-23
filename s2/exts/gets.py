@@ -113,7 +113,7 @@ class Gets(Cog):
             WHERE user_id = ?
         """, [datetime.datetime.utcnow(), msg.author.id])
 
-        pending_get = self.pending_gets[msg.channel.id]
+        pending_get = self.pending_gets[msg.guild.id]
 
         await self.bot.db.execute("""
             INSERT INTO voyager_gets (user_id, get_message_id, voyager_message_id, channel_id, guild_id)
@@ -152,19 +152,19 @@ class Gets(Cog):
         log.debug('committed get for %s', msg)
 
     async def on_message(self, msg):
+        if msg.webhook_id in self.webhooks:
+            self.pending_gets[msg.guild.id] = msg
+            return
+
         if msg.channel.id not in self.channels:
             return
 
-        if msg.webhook_id in self.webhooks:
-            self.pending_gets[msg.channel.id] = msg
-            return
-
-        async with self.locks[msg.channel.id]:
-            if msg.author.bot or msg.channel.id not in self.pending_gets:
+        async with self.locks[msg.guild.id]:
+            if msg.author.bot or msg.guild.id not in self.pending_gets:
                 return
 
             await self.commit_get(msg)
-            del self.pending_gets[msg.channel.id]
+            del self.pending_gets[msg.guild.id]
 
     @group()
     @commands.check(get_channel)
