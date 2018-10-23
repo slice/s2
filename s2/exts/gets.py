@@ -1,5 +1,7 @@
+import asyncio
 import datetime
 import logging
+from collections import defaultdict
 
 import discord
 from discord.ext import commands
@@ -69,6 +71,7 @@ class Gets(Cog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pending_gets = {}
+        self.locks = defaultdict(asyncio.Lock)
 
     @property
     def channels(self):
@@ -156,12 +159,12 @@ class Gets(Cog):
             self.pending_gets[msg.channel.id] = msg
             return
 
-        if msg.author.bot or msg.channel.id not in self.pending_gets:
-            return
+        async with self.locks[msg.channel.id]:
+            if msg.author.bot or msg.channel.id not in self.pending_gets:
+                return
 
-        await self.commit_get(msg)
-
-        del self.pending_gets[msg.channel.id]
+            await self.commit_get(msg)
+            del self.pending_gets[msg.channel.id]
 
     @group()
     @commands.check(get_channel)
