@@ -32,6 +32,26 @@ def image_renderer(func):
     return wrapper
 
 
+def wrap_single_word(draw, font, word, *, max_width):
+    chunks = []
+    current_chunk = ''
+    current_width = 0
+
+    for letter in word:
+        current_width += draw.textsize(letter, font=font)[0]
+        current_chunk += letter
+
+        if current_width > max_width:
+            chunks.append(current_chunk)
+            current_chunk = ''
+            current_width = 0
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks
+
+
 # http://jesselegg.com/archives/2009/09/5/simple-word-wrap-algorithm-pythons-pil/
 def draw_word_wrap(draw, font, text, xpos=0, ypos=0, *, max_width, fill=(0, 0, 0)):
     """
@@ -53,23 +73,32 @@ def draw_word_wrap(draw, font, text, xpos=0, ypos=0, *, max_width, fill=(0, 0, 0
     fill : Tuple[int, int, int]
         The fill color.
     """
-    total_width, total_height = draw.textsize(text, font=font)
+    total_width, line_height = draw.textsize(text, font=font)
+    lines = []
+    space_width = draw.textsize(' ', font=font)[0]
     remaining = max_width
-    space_width, space_height = draw.textsize(' ', font=font)
-    output_text = []
+
     for word in text.split():
-        word_width, word_height = draw.textsize(word, font=font)
-        if word_width + space_width > remaining:
-            output_text.append(word)
+        word_width = draw.textsize(word, font=font)[0]
+
+        if space_width + word_width > remaining:
+            if word_width > max_width:
+                # this word would wrap by itself. find the point where we can break the word itself
+                lines += wrap_single_word(draw, font, word, max_width=max_width)
+            else:
+                # this word can't fit, start a new line
+                lines.append(word)
             remaining = max_width - word_width
         else:
-            if not output_text:
-                output_text.append(word)
+            if not lines:
+                lines.append(word)
             else:
-                output = output_text.pop()
-                output += ' ' + word
-                output_text.append(output)
+                # add this word to the last line
+                new_line = lines.pop()
+                new_line += ' ' + word
+                lines.append(new_line)
             remaining -= word_width + space_width
-    for text in output_text:
+
+    for text in lines:
         draw.text((xpos, ypos), text, font=font, fill=fill)
-        ypos += total_height
+        ypos += line_height
