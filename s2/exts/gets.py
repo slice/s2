@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import logging
 from collections import defaultdict
+from random import choice
 
 import discord
 from discord.ext import commands
@@ -20,32 +21,90 @@ To see your total amount of GETs and other information about yourself like your 
 You can also use this command to view other people's profiles.
 """
 
-RANK_COLORS = [
-    discord.Color(0x45e6e5),
-    discord.Color(0x457ae5),
-    discord.Color(0x7a45e5),
-    discord.Color(0xe545e5),
-    discord.Color(0xe545b0),
-    discord.Color(0xe54545),
+RANKUP_FLAVOR = [
+    "Nice one!",
+    "weird flex but okay.",
+    "LEVEL UP!",
+    "You've gone up a level.",
+    "You totally deserve this.",
+    "okay, this is epic.",
+    "Feeling bored yet?",
+    "Nice to see that you're still wasting your lifespan on this.",
+    "Umm...",
+    "Well, okay.",
+    "You sure about this?",
+    "Sigh...",
+    "Sheesh.",
+    "\\*internal screaming\\*",
+    "\\*cough\\*",
+    "Oh god.",
+    "Oh no!",
+    "おめでとう！",
+    "Umm, okay.",
+    "Huh?",
 ]
 
-RANK_INFO = """{} 0 to 9 GETs
-You are a curious client modder.
 
-{} 10 to 19 GETs
-You are a young client modder.
+SALMON = discord.Color(0xff7e79)
+CANTALOUPE = discord.Color(0xffd479)
+BANANA = discord.Color(0xfffc79)
+RANKS = [
+    # --- base ranks
+    {'range': (0, 10), 'color': discord.Color(0x45e6e5),
+     'flavor': ["It's smart yet humble. Likes to rotate when nobody is around.",
+                "It's a passionate square.", "It's a cyan square. Scratch and sniff compatible."]},
+    {'range': (11, 20), 'color': discord.Color(0x457ae5),
+     'flavor': ["Likes to wear a hat sometimes.", "Has a strong preference "
+                "towards vanilla ice cream.", "Likes to play basketball."]},
+    {'range': (21, 40), 'color': discord.Color(0x7a45e5),
+     'flavor': ["A quiet hexagon. Wears glasses but doesn't need them.",
+                "Really addicted to anime somehow.", "Smells like grapes."]},
+    {'range': (41, 60), 'color': discord.Color(0xe545e5),
+     'flavor': ["Shy heptagon. Wants to be popular with today's generation.",
+                "Constantly has headphones on.", "Writes a lot of JavaScript."]},
+    {'range': (61, 80), 'color': discord.Color(0xe545b0),
+     'flavor': ["A rounded octagon. Looks like it has pink hair dye on.",
+                "It makes eye contact and looks away quickly.", '"Oh, hi."']},
+    {'range': (81, 100), 'color': discord.Color(0xe54545),
+     'flavor': ["An ominous red circle. It's actually pretty nice once you "
+                "get to know it.", '"But steel is heavier than feathers..."',
+                "Isn't the smartest, but it loves its friends a lot."]},
 
-{} 20 to 39 GETs
-You are a novice client modder.
+    # --- circles
+    {'range': (101, 110), 'color': BANANA,
+     'flavor': ["Blushes too much.", "Takes compliments too far.",
+                "Follows you on the fediverse."]},
+    {'range': (111, 120), 'color': CANTALOUPE,
+     'flavor': ["Wants to kill every spider on this planet.",
+                "Likes to think about life.", "Prefers `yarn` over `npm`."]},
+    {'range': (121, 130), 'color': SALMON,
+     'flavor': ["Covered in cherry sauce.", "Smells like strawberry.",
+                'Always says "hello" awkwardly.', "Watches too much YouTube."]},
 
-{} 40 to 59 GETs
-You are an experienced client modder.
+    # --- arrows
+    {'range': (131, 140), 'color': BANANA,
+     'flavor': ["Writes open source software for the masses.",
+                "Owns 5 dogs. It pets them constantly.", "Likes to keep "
+                "everything clean."]},
+    {'range': (141, 150), 'color': CANTALOUPE,
+     'flavor': ["Starved of physical affection...", "Needs a hug.",
+                "Talks a lot about its love interests."]},
+    {'range': (151, 160), 'color': SALMON,
+     'flavor': ["Likes to point to interesting things.", "Often used by "
+                "pedestrians and drivers all around the world.", "Likes to "
+                "flex its disproportionately large muscles..."]},
 
-{} 60 to 79 GETs
-You are a client modding aficionado.
-
-{} 80 to \N{INFINITY} GETs
-You are a Discord employee."""
+    # --- bookmarks
+    {'range': (161, 170), 'color': BANANA,
+     'flavor': ["It already likes you.", "Thinks it's too cold in this room.",
+                "Likes to read books a lot. Makes frequent trips to the library."]},
+    {'range': (171, 180), 'color': CANTALOUPE,
+     'flavor': ["Mildly annoying, but also charming.", "Pretends to hate you, "
+                "but actually likes you. Huh.", "The most tsundere of ranks."]},
+    {'range': (181, 190), 'color': SALMON,
+     'flavor': ["Likes to play the saxophone.", "Sleeps too much.",
+                "Is often found alone.", "Likes to make wishes."]},
+]
 
 
 def get_channel(ctx):
@@ -53,18 +112,15 @@ def get_channel(ctx):
 
 
 def get_rank(n_gets: int) -> int:
-    if 0 < n_gets < 10:
-        return 0
-    if 10 <= n_gets < 20:
-        return 1
-    elif 20 <= n_gets < 40:
-        return 2
-    elif 40 <= n_gets < 60:
-        return 3
-    elif 60 <= n_gets < 80:
-        return 4
+    rank = discord.utils.find(
+        lambda rank: n_gets in range(rank['range'][0], rank['range'][1] + 1),
+        RANKS,
+    )
+
+    if rank:
+        return rank
     else:
-        return 5
+        return RANKS[-1]
 
 
 class Gets(Cog):
@@ -122,20 +178,22 @@ class Gets(Cog):
 
         past_rank = account[2]
         now_gets = account[1] + 1
-        now_rank = get_rank(now_gets)
-        now_rank_emoji = self.bot.emoji('get.' + str(now_rank))
 
-        if past_rank != now_rank:
-            # rank change
+        now_rank = get_rank(now_gets)
+        now_rank_n = RANKS.index(now_rank)
+        now_rank_emoji = self.bot.emoji(f'get.{now_rank_n}')
+        flavor = choice(now_rank['flavor'])
+
+        if past_rank != now_rank_n:
             await self.bot.db.execute("""
                 UPDATE voyager_stats
                 SET rank = ?
                 WHERE user_id = ?
-            """, [now_rank, msg.author.id])
+            """, [now_rank_n, msg.author.id])
 
             await msg.channel.send(
-                '**You have leveled up!** '
-                f'With {now_gets} GETs, you are now rank {now_rank_emoji}. Congratulations!'
+                f'**{choice(RANKUP_FLAVOR)}** You are now rank {now_rank_emoji}.'
+                f'\n\n**{now_rank_emoji} info:** {flavor}'
             )
 
         if now_gets == 1:
@@ -200,7 +258,9 @@ class Gets(Cog):
             await ctx.send(f"{ctx.tick(False)} {subject} collected any GETs yet.")
             return
 
-        embed = discord.Embed(title=str(target), color=RANK_COLORS[account[2]])
+        rank = RANKS[account[2]]
+
+        embed = discord.Embed(title=str(target), color=rank['color'])
         rank_emoji = ctx.bot.emoji(f'get.{account[2]}')
         last_ago = human_delta(account[3])
         embed.add_field(name='Current Rank', value=f'{rank_emoji} ({account[2]})')
@@ -208,10 +268,38 @@ class Gets(Cog):
         embed.add_field(name='Last GET', value=f'{last_ago} ago')
         await ctx.send(embed=embed)
 
+    @gets.command(hidden=True)
+    @commands.is_owner()
+    async def write(self, ctx, target: discord.Member, amount: int):
+        """Writes GET amount for a user"""
+        await self.bot.db.execute("""
+            UPDATE voyager_stats
+            SET total_gets = ?
+            WHERE user_id = ?
+        """, [amount, target.id])
+        await self.bot.db.commit()
+        await ctx.ok()
+
+    @gets.command(hidden=True)
+    @commands.is_owner()
+    async def sink(self, ctx, target: discord.Member):
+        """Deletes all of a user's GETs"""
+        await self.bot.db.execute("""
+            UPDATE voyager_stats
+            SET total_gets = 0
+            WHERE user_id = ?
+        """, [target.id])
+        await self.bot.db.commit()
+        await ctx.ok()
+
     @gets.command()
     async def ranks(self, ctx):
         """Shows all ranks"""
-        await ctx.send(RANK_INFO.format(*[ctx.bot.emoji(f'get.{num}') for num in range(0, 6)]))
+        ctx.new_paginator(prefix='', suffix='')
+        for n, rank in enumerate(RANKS):
+            emoji = self.bot.emoji(f'get.{n}')
+            ctx += f'{emoji} @ {rank["range"][0]} GETs'
+        await ctx.send_pages()
 
     @gets.command(aliases=['what'])
     async def wtf(self, ctx):
