@@ -126,10 +126,12 @@ class AOC(Cog):
             else:
                 comp_delta = ''
 
+            stars = f'{member["stars"] / 2}\N{BLACK STAR}'
+
             if index < 3:
-                return f'{emoji} {MEDALS[index]} **{score}\N{BLACK STAR} {name}**{comp_delta}'
+                return f'{emoji} {MEDALS[index]} **{score}\N{SECTION SIGN} {stars} {name}**{comp_delta}'
             else:
-                return f'{emoji} `{index + 1}.` {score}\N{BLACK STAR} {name}{comp_delta}'
+                return f'{emoji} `{index + 1}.` {score}\N{SECTION SIGN} {stars} {name}{comp_delta}'
 
         def format_listing(members):
             return '\n'.join(map(format_member, enumerate(members)))
