@@ -17,13 +17,13 @@ class Bent(Cog):
         channel = ban_channel_for(guild)
         if not channel:
             return
-        await channel.send(f'**{user} got bent**')
+        await channel.send(f'***{user} got bent***')
 
     async def on_member_unban(self, guild, user):
         channel = ban_channel_for(guild)
         if not channel:
             return
-        await channel.send(f'**{user} got unbent**')
+        await channel.send(f'***{user} got unbent***')
 
 
 def setup(bot):
