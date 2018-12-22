@@ -65,21 +65,26 @@ class Gets(Cog):
             account = await self.get_account(msg.author)
 
         get_messages = self.pending_gets[msg.guild.id]
+        earned = len(get_messages)
 
         await self.bot.db.execute("""
             UPDATE voyager_stats
             SET total_gets = total_gets + ?, last_get = ?
             WHERE user_id = ?
-        """, [len(get_messages), datetime.datetime.utcnow(), msg.author.id])
+        """, [earned, datetime.datetime.utcnow(), msg.author.id])
 
         await self.bot.db.execute("""
             INSERT INTO voyager_gets (user_id, get_message_id, voyager_message_id, channel_id, guild_id)
             VALUES (?, ?, ?, ?, ?)
         """, [msg.author.id, msg.id, get_messages[-1].id, msg.channel.id, msg.guild.id])
 
-        now_gets = account[1] + len(get_messages)
+        now_gets = account[1] + earned
 
-        await msg.channel.send(now_gets)
+        if earned > 1:
+            await msg.channel.send(f'{now_gets} (+{earned})')
+        else:
+            await msg.channel.send(now_gets)
+
         await self.bot.db.commit()
 
         log.debug('committed get for %s', msg)
