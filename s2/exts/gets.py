@@ -6,7 +6,7 @@ from collections import defaultdict
 import discord
 from discord.ext import commands
 from lifesaver.bot import Cog, group
-from lifesaver.utils import human_delta, Table, codeblock
+from lifesaver.utils import human_delta, pluralize
 
 log = logging.getLogger(__name__)
 
@@ -16,6 +16,13 @@ GAME_INFO = """A message sent directly after a build notification is a **GET.**
 To see your total amount of GETs and other information about yourself, type `{prefix}gets profile`.
 You can also use this command to view other people's profiles.
 """
+
+
+LEADERBOARD_MEDALS = [
+    '\N{FIRST PLACE MEDAL}',
+    '\N{SECOND PLACE MEDAL}',
+    '\N{THIRD PLACE MEDAL}'
+]
 
 
 def get_channel(ctx):
@@ -109,23 +116,54 @@ class Gets(Cog):
     async def gets(self, ctx):
         """༼ つ ◕_◕ ༽つ TAKE MY GETS ༼ つ ◕_◕ ༽つ"""
 
-    @gets.command()
+    @gets.command(aliases=['leaderboard'])
     async def top(self, ctx):
         """Shows the top GETters"""
-        table = Table('User', 'GETs')
 
         async with ctx.bot.db.execute("""
             SELECT * FROM voyager_stats
             ORDER BY total_gets DESC
             LIMIT 10
         """) as cur:
-            async for row in cur:
-                user = ctx.bot.get_user(row[0])
-                if not user:
-                    user = '???'
-                table.add_row(str(user), str(row[1]))
+            users = await cur.fetchall()
 
-        await ctx.send(codeblock(await table.render(ctx.bot.loop)))
+        embed = discord.Embed(title='GET Leaderboard')
+
+        def format_row(index, row):
+            user_id = row[0]
+            total_gets = row[1]
+            user = ctx.bot.get_user(user_id)
+            gets = pluralize(get=total_gets, with_quantity=True)
+
+            if not user:
+                user = '???'
+
+            if index < 3:
+                medal = LEADERBOARD_MEDALS[index]
+                if index == 0:
+                    return f'{medal} **{user}** ({gets})'
+                else:
+                    return f'{medal} {user} ({gets})'
+            else:
+                return f'{index + 1}. {user} ({gets})'
+
+        listing = [
+            format_row(index, row)
+            for index, row in enumerate(users)
+        ]
+
+        embed.add_field(name='Top 3', value='\n'.join(listing[:3]), inline=False)
+
+        others = users[3:]
+        if others:
+            embed.add_field(
+                name='Runner-ups',
+                value='\n'.join(listing[3:]),
+                inline=False
+            )
+
+        embed.set_footer(text='An efficient use of human energy indeed.')
+        await ctx.send(embed=embed)
 
     @gets.command(aliases=['stats', 'info'])
     async def profile(self, ctx, target: discord.Member = None):
