@@ -3,7 +3,6 @@ import functools
 from io import BytesIO
 
 import discord
-from lifesaver.utils.timing import Timer
 
 
 def image_renderer(func):
@@ -19,15 +18,11 @@ def image_renderer(func):
             buffer.seek(0)
             return buffer
 
-        with Timer() as timer:
-            buffer = await loop.run_in_executor(None, render)
+        buffer = await loop.run_in_executor(None, render)
 
         image.close()
 
-        await ctx.send(
-            f'Rendered in {timer}. ({image.width} \U000000d7 {image.height})',
-            file=discord.File(buffer, 'image.png')
-        )
+        await ctx.send(file=discord.File(buffer, 'image.png'))
 
     return wrapper
 
