@@ -1,7 +1,11 @@
+import itertools
+import io
+
 from PIL import Image, ImageDraw, ImageFont
 from discord.ext import commands
 from lifesaver.bot import Cog, command
 
+from .converters import TierList
 from .utils import image_renderer, draw_word_wrap
 
 standard_cooldown = commands.cooldown(1, 3, commands.BucketType.user)
@@ -16,6 +20,94 @@ brain_heights = [
     210,
     194,
 ]
+
+tier_colors = [
+    (255, 127, 127),
+    (255, 191, 127),
+    (255, 223, 127),
+    (255, 255, 127),
+    (191, 255, 127),
+    (127, 255, 127),
+    (127, 255, 255),
+    (127, 191, 255),
+    (127, 127, 255),
+    (255, 127, 255),
+]
+
+
+@image_renderer
+def render_tier_list(groups, avatars):
+    border = 2
+    avatar_size = 64
+    row_height = border + avatar_size
+    image_height = len(groups) * row_height
+    name_padding = 20
+
+    font = ImageFont.truetype('assets/Arial_Regular.ttf', 16)
+    image = Image.new('RGB', (10, image_height), (49, 52, 58))
+    draw = ImageDraw.Draw(image)
+
+    # calculate the true width of the image based on the longest name provided
+    longest_name = max(groups, key=lambda group: len(group['name']))['name']
+    longest_users = len(max(groups, key=lambda group: len(group['users']))['users'])
+    longest_name_size = draw.textsize(longest_name, font)
+    names_width = longest_name_size[0] + (name_padding * 2) + border
+    image_width = names_width + max(avatar_size * 8, longest_users * (avatar_size - 5) + 5)
+    image = image.resize((image_width, image_height))
+
+    # make a new imagedraw for the new image
+    del draw
+    draw = ImageDraw.Draw(image)
+
+    for index, group in enumerate(list(groups)):
+        print(f'index: {index}, group: {group}')
+        y = row_height * index
+
+        # draw group fill
+        draw.rectangle(
+            [(0, y), (names_width - border, y + row_height - border)],
+            fill=tier_colors[index % len(tier_colors)],
+        )
+
+        # draw group name
+        draw.text(
+            (name_padding, y + (row_height / 2) - (longest_name_size[1] / 2)),
+            group['name'], (0, 0, 0), font
+        )
+
+        # draw bottom border
+        bottom_border_y = y + row_height - border
+        draw.line(
+            [(0, bottom_border_y), (image_width, bottom_border_y)],
+            fill=(0, 0, 0), width=border,
+        )
+
+        # draw chat background border
+        draw.line(
+            [(names_width, bottom_border_y), (image_width, bottom_border_y)],
+            fill=(42, 45, 50), width=border,
+        )
+
+        for user_index, user in enumerate(group['users']):
+            avatar = Image.open(fp=io.BytesIO(avatars[user.id]))\
+                .convert('RGBA')\
+                .resize((avatar_size - 10, avatar_size - 10), resample=Image.BICUBIC)
+
+            avatar_offset = user_index * (avatar_size - 5)
+            avatar_x = names_width + avatar_offset + 5
+            avatar_y = y + 5
+
+            with avatar:
+                image.paste(avatar, (avatar_x, avatar_y), avatar,)
+
+    # draw border between names and users
+    draw.line(
+        [(names_width - border, 0), (names_width - border, image_height)],
+        fill=(0, 0, 0), width=border,
+    )
+
+    del draw
+    return image
 
 
 @image_renderer
@@ -72,6 +164,24 @@ class ImgMod(Cog):
             await ctx.send('put something')
             return
         await render_discord_logo(ctx, text)
+
+    @command(typing=True)
+    @commands.guild_only()
+    @standard_cooldown
+    async def tierlist(self, ctx, *groups: TierList):
+        """Generates a tier list of your friends"""
+        if len(groups) == 0:
+            await ctx.send("can't make a tier list outta nothing bud")
+            return
+
+        users = itertools.chain.from_iterable([group['users'] for group in groups])
+        avatars = {}
+        for user in set(users):
+            avatar_url = user.avatar_url_as(format='png', static_format='png', size=64)
+            async with self.session.get(avatar_url) as resp:
+                avatars[user.id] = await resp.read()
+
+        await render_tier_list(ctx, groups, avatars)
 
     @command(typing=True)
     @standard_cooldown
