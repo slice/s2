@@ -25,7 +25,7 @@ def get_channel(ctx):
 class Gets(Cog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.pending_gets = {}
+        self.pending_gets = defaultdict(list)
         self.locks = defaultdict(asyncio.Lock)
 
     @property
@@ -60,23 +60,24 @@ class Gets(Cog):
 
         account = await self.get_account(msg.author)
         if account is None:
+            # automatically create an account
             await self.create_account(msg.author)
-            account = await self.get_account(msg.author)  # bleh
+            account = await self.get_account(msg.author)
+
+        get_messages = self.pending_gets[msg.guild.id]
 
         await self.bot.db.execute("""
             UPDATE voyager_stats
-            SET total_gets = total_gets + 1, last_get = ?
+            SET total_gets = total_gets + ?, last_get = ?
             WHERE user_id = ?
-        """, [datetime.datetime.utcnow(), msg.author.id])
-
-        pending_get = self.pending_gets[msg.guild.id]
+        """, [len(get_messages), datetime.datetime.utcnow(), msg.author.id])
 
         await self.bot.db.execute("""
             INSERT INTO voyager_gets (user_id, get_message_id, voyager_message_id, channel_id, guild_id)
             VALUES (?, ?, ?, ?, ?)
-        """, [msg.author.id, msg.id, pending_get.id, msg.channel.id, msg.guild.id])
+        """, [msg.author.id, msg.id, get_messages[-1].id, msg.channel.id, msg.guild.id])
 
-        now_gets = account[1] + 1
+        now_gets = account[1] + len(get_messages)
 
         await msg.channel.send(now_gets)
         await self.bot.db.commit()
@@ -85,7 +86,7 @@ class Gets(Cog):
 
     async def on_message(self, msg):
         if msg.webhook_id in self.webhooks:
-            self.pending_gets[msg.guild.id] = msg
+            self.pending_gets[msg.guild.id].append(msg)
             return
 
         if msg.channel.id not in self.channels:
