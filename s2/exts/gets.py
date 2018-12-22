@@ -140,10 +140,7 @@ class Gets(Cog):
 
             if index < 3:
                 medal = LEADERBOARD_MEDALS[index]
-                if index == 0:
-                    return f'{medal} **{user}** ({gets})'
-                else:
-                    return f'{medal} {user} ({gets})'
+                return f'{medal} **{user}** ({gets})'
             else:
                 return f'{index + 1}. {user} ({gets})'
 
