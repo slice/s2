@@ -9,6 +9,7 @@ __pycache__
 *.pyc
 
 s2.db
+/config
 /config.yml
 /bot.log
 /insects.json
