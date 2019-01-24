@@ -4,7 +4,7 @@ from lifesaver.config import Config
 from lifesaver.bot import Cog
 
 
-class HouseConfig:
+class HouseConfig(Config):
     slice_user_id: int = None
     house_guild_id: int = None
     emojis_channel_id: int = None
