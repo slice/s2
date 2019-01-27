@@ -21,11 +21,12 @@ You can also use this command to view other people's profiles.
 LEADERBOARD_MEDALS = [
     '\N{FIRST PLACE MEDAL}',
     '\N{SECOND PLACE MEDAL}',
-    '\N{THIRD PLACE MEDAL}'
+    '\N{THIRD PLACE MEDAL}',
 ]
 
 
 def get_channel(ctx):
+    """A check that enforces commands to only be runnable from GET channels."""
     return ctx.channel.id in ctx.cog.channels
 
 
