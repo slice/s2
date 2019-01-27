@@ -72,7 +72,7 @@ class House(Cog):
 
         emojis = sorted(self.house.emojis, key=lambda emoji: emoji.name)
         descriptions = '\n'.join([
-            f'{emoji}: `:{emoji.name}:`' for emoji in emojis
+            f'{emoji} `:{emoji.name}:`' for emoji in emojis
         ])
         messages = await channel.history(limit=1).flatten()
 
