@@ -30,6 +30,33 @@ def get_channel(ctx):
     return ctx.channel.id in ctx.cog.channels
 
 
+async def wait_for_n_messages(bot, channel, *, messages: int, timeout: int, check=None) -> bool:
+    """Wait for a certain amount of messages to pass in a window of time.
+
+    Returns whether the number of messages was reached.
+    """
+
+    def default_check(msg):
+        return msg.channel == channel
+
+    async def message_counter():
+        amount = 0
+
+        while True:
+            await bot.wait_for('message', check=check or default_check)
+            amount += 1
+
+            if amount >= messages:
+                return
+
+    try:
+        await asyncio.wait_for(message_counter(), timeout=timeout, loop=bot.loop)
+    except asyncio.TimeoutError:
+        return False
+
+    return True
+
+
 class Gets(Cog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,8 +90,9 @@ class Gets(Cog):
             VALUES (?, 0, 0)
         """, [user.id])
 
-    async def commit_get(self, msg: discord.Message):
-        log.debug('committing get for %s', msg)
+    async def process_get(self, msg: discord.Message):
+        """Process an earned GET from a message."""
+        log.debug('processing get grab (message: %r)', msg)
 
         account = await self.get_account(msg.author)
         if account is None:
@@ -75,27 +103,39 @@ class Gets(Cog):
         get_messages = self.pending_gets[msg.guild.id]
         earned = len(get_messages)
 
+        # update total amount of gets earned
         await self.bot.db.execute("""
             UPDATE voyager_stats
             SET total_gets = total_gets + ?, last_get = ?
             WHERE user_id = ?
         """, [earned, datetime.datetime.utcnow(), msg.author.id])
 
+        # add the individual get
         await self.bot.db.execute("""
             INSERT INTO voyager_gets (user_id, get_message_id, voyager_message_id, channel_id, guild_id)
             VALUES (?, ?, ?, ?, ?)
         """, [msg.author.id, msg.id, get_messages[-1].id, msg.channel.id, msg.guild.id])
 
-        now_gets = account[1] + earned
-
-        if earned > 1:
-            await msg.channel.send(f'{now_gets} (+{earned})')
-        else:
-            await msg.channel.send(now_gets)
+        new_total = account[1] + earned
 
         await self.bot.db.commit()
+        log.debug('committed get grab to database (target: %r, new_total: %d)', msg.author, new_total)
 
-        log.debug('committed get for %s', msg)
+        win_message = str(new_total)
+
+        if earned > 1:
+            win_message += f' (+{earned})'
+
+        notice = await msg.channel.send(win_message)
+
+        def other_message_check(incoming_msg):
+            return incoming_msg.channel == msg.channel and incoming_msg.author != msg.author
+
+        # elaborate on the earner of the gets if another message is quickly sent
+        # after the get was earned.
+        if await wait_for_n_messages(self.bot, msg.channel, messages=1, timeout=3, check=other_message_check):
+            log.debug('elaborating get earner (notice: %r)', notice)
+            await notice.edit(content=f'{msg.author.name}  \xb7  {win_message}')
 
     async def on_message(self, msg):
         if msg.webhook_id in self.webhooks:
@@ -109,7 +149,7 @@ class Gets(Cog):
             if msg.author.bot or msg.guild.id not in self.pending_gets:
                 return
 
-            await self.commit_get(msg)
+            await self.process_get(msg)
             del self.pending_gets[msg.guild.id]
 
     @group()
@@ -142,8 +182,8 @@ class Gets(Cog):
             if index < 3:
                 medal = LEADERBOARD_MEDALS[index]
                 return f'{medal} **{user}** ({gets})'
-            else:
-                return f'{index + 1}. {user} ({gets})'
+
+            return f'{index + 1}. {user} ({gets})'
 
         listing = [
             format_row(index, row)
