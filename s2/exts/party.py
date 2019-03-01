@@ -145,7 +145,7 @@ class PartyCog(Cog):
         super().__init__(bot)
         self.parties = set()
 
-    @group(invoke_without_command=True)
+    @group(invoke_without_command=True, enabled=False)
     @cooldown(1, 60, BucketType.guild)
     async def party(self, ctx: Context, dur_seconds: int = 5 * 60):
         """Creates a party."""
