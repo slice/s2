@@ -2,7 +2,7 @@ __all__ = ['upload']
 
 import aiohttp
 
-ENDPOINT = 'http://mystb.in'
+ENDPOINT = 'https://mystb.in'
 HEADERS = {'User-Agent': 's2/0.0.0'}
 
 
