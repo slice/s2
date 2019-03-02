@@ -90,7 +90,7 @@ class House(Cog):
 
         async with self.session.get(avatar_url) as resp:
             avatar_bytes = await resp.read()
-            await self.house.edit(avatar=avatar_bytes, reason='slice changed his avatar')
+            await self.house.edit(icon=avatar_bytes, reason='slice changed his avatar')
 
     async def on_guild_emojis_update(self, guild, before, after):
         self.log.debug('processing guild emoji update %d', guild.id)
