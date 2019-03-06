@@ -129,7 +129,11 @@ class Gets(Cog):
         notice = await msg.channel.send(win_message)
 
         def other_message_check(incoming_msg):
-            return incoming_msg.channel == msg.channel and incoming_msg.author != msg.author
+            return (
+                incoming_msg.channel == msg.channel
+                and incoming_msg.author != msg.author
+                and not incoming_msg.author.bot
+            )
 
         # elaborate on the earner of the gets if another message is quickly sent
         # after the get was earned.
