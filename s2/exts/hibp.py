@@ -20,7 +20,7 @@ class HIBP(Cog):
                 pwned = await resp.json()
 
         accounts = ', '.join(f"{site['Title']} ({site['Domain']})" for site in pwned)
-        website = pluralize(website=len(pwned), with_quantity=True)
+        website = pluralize(website=len(pwned))
         await ctx.send(f"\U0001f62c oh no, pwned on {website}!\n\n{truncate(accounts, 1800)}")
 
 

@@ -134,7 +134,7 @@ class Perms(Cog):
             output += '\n\n'
 
         link = await upload(output)
-        roles = pluralize(role=len(lint_results), with_quantity=True)
+        roles = pluralize(role=len(lint_results))
         await ctx.send(f'{roles} are :( - {link}')
 
     @command()

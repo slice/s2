@@ -125,7 +125,7 @@ class MafiaGame:
             required = self.REQUIRED_PLAYERS - len(self.roster.all)
             formatted = '\n'.join(str(user) for user in self.roster.all)
 
-            required = pluralize(player=required, with_quantity=True, with_indicative=True)
+            required = pluralize(player=required, with_indicative=True)
             embed = discord.Embed(title='Players', description=formatted)
             embed.set_footer(text=f'{required} still needed')
             return embed

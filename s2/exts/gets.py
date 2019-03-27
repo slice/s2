@@ -178,7 +178,7 @@ class Gets(Cog):
             user_id = row[0]
             total_gets = row[1]
             user = ctx.bot.get_user(user_id)
-            gets = pluralize(get=total_gets, with_quantity=True)
+            gets = pluralize(get=total_gets)
 
             if not user:
                 user = '???'
