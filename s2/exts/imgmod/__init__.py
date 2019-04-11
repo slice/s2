@@ -155,8 +155,8 @@ def render_discord_logo(text: str):
         return base
 
 
-class ImgMod(Cog):
-    @command(typing=True)
+class ImgMod(Cog, name='Image manipulations'):
+    @command(typing=True, hidden=True, enabled=False)
     @standard_cooldown
     async def discordlogo(self, ctx, *, text):
         """Generates a Discord logo"""
@@ -165,7 +165,7 @@ class ImgMod(Cog):
             return
         await render_discord_logo(ctx, text)
 
-    @command(typing=True)
+    @command(typing=True, hidden=True)
     @commands.guild_only()
     @standard_cooldown
     async def tierlist(self, ctx, *groups: TierList):

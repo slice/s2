@@ -32,7 +32,7 @@ def diff_perms(before: discord.Permissions, after: discord.Permissions) -> str:
     return changes
 
 
-class Perms(Cog):
+class Perms(Cog, name='Permissions'):
     @command(aliases=['flatten_roles'])
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()

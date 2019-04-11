@@ -20,7 +20,7 @@ class LastFMUser(commands.Converter):
         return info
 
 
-class LastFM(Cog):
+class LastFM(Cog, name='Last.fm'):
     def __init__(self, bot, *args, **kwargs):
         super().__init__(bot, *args, **kwargs)
 

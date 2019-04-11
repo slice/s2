@@ -500,9 +500,8 @@ class Mafia(Cog):
         super().__init__(*args, **kwargs)
         self.sessions = set()
 
-    @command()
+    @command(hidden=True, enabled=False)
     @commands.guild_only()
-    @commands.is_owner()
     async def mafia(self, ctx: Context):
         """Starts a game of mafia."""
         if ctx.channel.id in self.sessions:
