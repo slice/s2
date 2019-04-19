@@ -13,12 +13,14 @@ def ban_channel_for(guild: discord.Guild) -> typing.Optional[discord.TextChannel
 
 
 class Bent(Cog):
+    @Cog.listener()
     async def on_member_ban(self, guild, user):
         channel = ban_channel_for(guild)
         if not channel:
             return
         await channel.send(f'***{user} got bent***')
 
+    @Cog.listener()
     async def on_member_unban(self, guild, user):
         channel = ban_channel_for(guild)
         if not channel:

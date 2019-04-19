@@ -16,15 +16,12 @@ class HouseConfig(Config):
 
 
 @executor_function
-def flip_avatar(avatar_bytes):
-    buffer = BytesIO()
-
-    with Image.open(BytesIO(avatar_bytes)) as image:
+def flip_avatar(buffer):
+    with Image.open(buffer) as image:
         image = image.transpose(Image.FLIP_TOP_BOTTOM)
         image.save(buffer, 'png')
 
     buffer.seek(0)
-    return buffer
 
 
 @Cog.with_config(HouseConfig)
@@ -51,20 +48,20 @@ class House(Cog):
         await self.update_guild_icon(ctx.author)
         await ctx.ok()
 
-    @command(hidden=True, name='disguise', aliases=['steal_avatar'])
+    @command(hidden=True, name='disguise')
     @commands.is_owner()
-    async def steal_avatar_command(self, ctx, target: discord.Member = None):
+    async def disguise_command(self, ctx, target: discord.Member = None):
         """Steal someone's avatar"""
         target = target or ctx.author
         await self.steal_avatar(target)
-        await ctx.send('done')
+        await ctx.ok()
 
     async def steal_avatar(self, member):
-        avatar_url = member.avatar_url_as(format='png', size=256)
-        async with self.session.get(avatar_url) as resp:
-            avatar_bytes = await resp.read()
-        flipped_bytes = await flip_avatar(avatar_bytes)
-        await self.bot.user.edit(avatar=flipped_bytes.getvalue())
+        avatar = member.avatar_url_as(format='png', size=256)
+        with BytesIO() as buffer:
+            await avatar.save(buffer, seek_begin=True)
+            flipped_bytes = await flip_avatar(buffer)
+            await self.bot.user.edit(avatar=flipped_bytes.getvalue())
 
     async def update_emoji_listing(self):
         """Update the emoji listing in the #emojis channel."""
@@ -92,6 +89,7 @@ class House(Cog):
             avatar_bytes = await resp.read()
             await self.house.edit(icon=avatar_bytes, reason='slice changed his avatar')
 
+    @Cog.listener()
     async def on_guild_emojis_update(self, guild, before, after):
         self.log.debug('processing guild emoji update %d', guild.id)
 
@@ -101,8 +99,9 @@ class House(Cog):
         self.log.debug('automatically updating emoji listing')
         await self.update_emoji_listing()
 
-    async def on_member_update(self, before, after):
-        if before.id != self.slice.id or before.avatar == after.avatar:
+    @Cog.listener()
+    async def on_user_update(self, before, after):
+        if before != self.slice or before.avatar == after.avatar:
             return
 
         self.log.debug('automatically updating guild icon')

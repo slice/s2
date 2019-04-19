@@ -141,6 +141,7 @@ class Gets(Cog):
             log.debug('elaborating get earner (notice: %r)', notice)
             await notice.edit(content=f'{msg.author.name}  \xb7  {win_message}')
 
+    @Cog.listener()
     async def on_message(self, msg):
         if msg.webhook_id in self.webhooks:
             self.pending_gets[msg.guild.id].append(msg)
