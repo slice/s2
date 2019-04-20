@@ -60,8 +60,7 @@ class LastFM(Cog, name='Last.fm'):
             return format_track(track) + f' ({delta})'
 
         def format_track(track):
-            text = f'{track.artist} - {track.title}'
-            return text
+            return discord.utils.escape_markdown(f'{track.artist} \N{em dash} {track.title}')
 
         tracks = '\n'.join(
             format_played_track(track)
@@ -95,7 +94,9 @@ class LastFM(Cog, name='Last.fm'):
 
         def format_item(item):
             track = item.item
-            return f'{track.artist} - {track.title} ({item.weight} plays)'
+            track_description = discord.utils.escape_markdown(
+                f'{track.artist} \N{em dash} {track.title}')
+            return f'{track_description} ({item.weight} plays)'
 
         favs = '\n'.join(
             format_item(fav)
