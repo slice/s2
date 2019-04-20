@@ -11,7 +11,7 @@ LASTFM_COLOR = discord.Color(0xB90000)
 
 class LastFMUser(commands.Converter):
     async def convert(self, ctx, argument):
-        cog = ctx.command.instance
+        cog = ctx.command.cog
 
         info = await ctx.bot.loop.run_in_executor(None, cog.get_info, argument)
         if not info:
