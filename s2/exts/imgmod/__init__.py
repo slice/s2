@@ -177,8 +177,8 @@ class ImgMod(Cog, name='Image manipulations'):
         users = itertools.chain.from_iterable([group['users'] for group in groups])
         avatars = {}
         for user in set(users):
-            avatar_url = user.avatar_url_as(format='png', static_format='png', size=64)
-            async with self.session.get(avatar_url) as resp:
+            avatar = user.avatar_url_as(format='png', static_format='png', size=64)
+            async with self.session.get(str(avatar)) as resp:
                 avatars[user.id] = await resp.read()
 
         await render_tier_list(ctx, groups, avatars)
