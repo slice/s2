@@ -34,6 +34,18 @@ tier_colors = [
     (255, 127, 255),
 ]
 
+@image_renderer
+def render_spark_joy(bad, good):
+    image = Image.open('assets/spark_joy.jpg')
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.truetype('assets/Arial_Regular.ttf', 32)
+
+    draw_word_wrap(draw, font, bad, 500, 26, max_width=472)
+    draw_word_wrap(draw, font, good, 500, 510, max_width=472)
+
+    del draw
+    return image
+
 
 @image_renderer
 def render_tier_list(groups, avatars):
@@ -164,6 +176,12 @@ class ImgMod(Cog, name='Image manipulations'):
             await ctx.send('put something')
             return
         await render_discord_logo(ctx, text)
+
+    @command(typing=True)
+    @standard_cooldown
+    async def joy(self, ctx, bad, *, good):
+        """This one sparks joy."""
+        await render_spark_joy(ctx, bad, good)
 
     @command(typing=True, hidden=True)
     @commands.guild_only()
