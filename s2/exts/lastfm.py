@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 
 import pylast
-from lifesaver.bot import Cog, group
+import lifesaver
 from lifesaver.utils.formatting import human_delta
 
 LASTFM_COLOR = discord.Color(0xB90000)
@@ -20,7 +20,7 @@ class LastFMUser(commands.Converter):
         return info
 
 
-class LastFM(Cog, name='Last.fm'):
+class LastFM(lifesaver.Cog, name='Last.fm'):
     def __init__(self, bot, *args, **kwargs):
         super().__init__(bot, *args, **kwargs)
 
@@ -48,7 +48,7 @@ class LastFM(Cog, name='Last.fm'):
             'top_tracks': top_tracks,
         }
 
-    @group(name='last_fm', aliases=['lfm', 'last.fm'], typing=True, invoke_without_command=True)
+    @lifesaver.group(name='last_fm', aliases=['lfm', 'last.fm'], typing=True, invoke_without_command=True)
     @commands.cooldown(1, 3, commands.BucketType.user)
     async def last_fm_command(self, ctx, user: LastFMUser):
         """Shows last.fm info."""

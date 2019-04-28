@@ -7,9 +7,9 @@ import random
 import typing
 
 import discord
+import lifesaver
 from discord.ext import commands
 from lifesaver.utils import pluralize
-from lifesaver.bot import Cog, Context, command
 
 
 def generate_name(name: str) -> str:
@@ -495,14 +495,14 @@ class MafiaGame:
         await self.game_channel.delete()
 
 
-class Mafia(Cog):
+class Mafia(lifesaver.Cog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.sessions = set()
 
-    @command(hidden=True, enabled=False)
+    @lifesaver.command(hidden=True, enabled=False)
     @commands.guild_only()
-    async def mafia(self, ctx: Context):
+    async def mafia(self, ctx: lifesaver.Context):
         """Starts a game of mafia."""
         if ctx.channel.id in self.sessions:
             await ctx.send('A game has already been started here.')

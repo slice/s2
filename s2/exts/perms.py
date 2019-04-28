@@ -1,9 +1,9 @@
 import collections
 
 import discord
+import lifesaver
 from discord.ext import commands
 from lifesaver.utils import pluralize
-from lifesaver.bot import Cog, Context, command
 from jishaku.paginators import PaginatorInterface
 
 from s2.uploader import upload
@@ -32,11 +32,11 @@ def diff_perms(before: discord.Permissions, after: discord.Permissions) -> str:
     return changes
 
 
-class Perms(Cog, name='Permissions'):
-    @command(aliases=['flatten_roles'])
+class Perms(lifesaver.Cog, name='Permissions'):
+    @lifesaver.command(aliases=['flatten_roles'])
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
-    async def flatten_role(self, ctx: Context, *roles: discord.Role):
+    async def flatten_role(self, ctx: lifesaver.Context, *roles: discord.Role):
         """Empties a role's permissions."""
         for role in roles:
             try:
@@ -46,11 +46,11 @@ class Perms(Cog, name='Permissions'):
                 ctx += f'\N{LOCK WITH INK PEN} unable to flatten {role.name}: {err}'
         await ctx.send_pages()
 
-    @command()
+    @lifesaver.command()
     @commands.bot_has_permissions(manage_roles=True)
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
-    async def clean_roles(self, ctx: Context):
+    async def clean_roles(self, ctx: lifesaver.Context):
         """Cleans all unnecessary permissions from roles."""
         everyone = ctx.guild.default_role
 
@@ -101,11 +101,11 @@ class Perms(Cog, name='Permissions'):
 
         await interface.add_line('Done!')
 
-    @command(typing=True)
+    @lifesaver.command(typing=True)
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
     @commands.cooldown(1, 5, type=commands.BucketType.guild)
-    async def lint_roles(self, ctx: Context):
+    async def lint_roles(self, ctx: lifesaver.Context):
         """Shows roles with unnecessary permissions."""
         indent = ' ' * 2
         lint_results = collections.defaultdict(list)
@@ -137,9 +137,9 @@ class Perms(Cog, name='Permissions'):
         roles = pluralize(role=len(lint_results))
         await ctx.send(f'{roles} are :( - {link}')
 
-    @command()
+    @lifesaver.command()
     @commands.guild_only()
-    async def perms(self, ctx: Context, target: discord.Member = None):
+    async def perms(self, ctx: lifesaver.Context, target: discord.Member = None):
         """Shows permissions for a user."""
         target = target or ctx.author
         perms = target.guild_permissions

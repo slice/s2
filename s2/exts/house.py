@@ -2,14 +2,13 @@ from io import BytesIO
 from random import choice
 
 import discord
+import lifesaver
 from discord.ext import commands
-from lifesaver.config import Config
-from lifesaver.bot import Cog, command
 from jishaku.functools import executor_function
 from PIL import Image
 
 
-class HouseConfig(Config):
+class HouseConfig(lifesaver.config.Config):
     slice_user_id: int = None
     house_guild_id: int = None
     emojis_channel_id: int = None
@@ -24,8 +23,8 @@ def flip_avatar(buffer):
     buffer.seek(0)
 
 
-@Cog.with_config(HouseConfig)
-class House(Cog):
+@lifesaver.Cog.with_config(HouseConfig)
+class House(lifesaver.Cog):
     @property
     def slice(self):
         return self.bot.get_user(self.config.slice_user_id)
@@ -34,23 +33,23 @@ class House(Cog):
     def house(self):
         return self.bot.get_guild(self.config.house_guild_id)
 
-    @command(hidden=True)
+    @lifesaver.command()
     @commands.is_owner()
-    async def update_listing(self, ctx):
+    async def update_listing(self, ctx: lifesaver.Context):
         """Manually updates the emoji listing"""
         await self.update_emoji_listing()
         await ctx.ok()
 
-    @command(hidden=True)
+    @lifesaver.command()
     @commands.is_owner()
-    async def update_icon(self, ctx):
+    async def update_icon(self, ctx: lifesaver.Context):
         """Manually updates the guild icon"""
         await self.update_guild_icon(ctx.author)
         await ctx.ok()
 
-    @command(hidden=True, name='disguise')
+    @lifesaver.command(name='disguise')
     @commands.is_owner()
-    async def disguise_command(self, ctx, target: discord.Member = None):
+    async def disguise_command(self, ctx: lifesaver.Context, target: discord.Member = None):
         """Steal someone's avatar"""
         target = target or ctx.author
         await self.steal_avatar(target)
@@ -85,11 +84,11 @@ class House(Cog):
         """Update the guild icon to slice's avatar."""
         avatar_url = slice.avatar_url_as(format='png', size=256)
 
-        async with self.session.get(avatar_url) as resp:
+        async with self.session.get(str(avatar_url)) as resp:
             avatar_bytes = await resp.read()
             await self.house.edit(icon=avatar_bytes, reason='slice changed his avatar')
 
-    @Cog.listener()
+    @lifesaver.Cog.listener()
     async def on_guild_emojis_update(self, guild, before, after):
         self.log.debug('processing guild emoji update %d', guild.id)
 
@@ -99,7 +98,7 @@ class House(Cog):
         self.log.debug('automatically updating emoji listing')
         await self.update_emoji_listing()
 
-    @Cog.listener()
+    @lifesaver.Cog.listener()
     async def on_user_update(self, before, after):
         if before != self.slice or before.avatar == after.avatar:
             return

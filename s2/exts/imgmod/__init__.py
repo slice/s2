@@ -1,9 +1,10 @@
 import itertools
 import io
 
+import discord
+import lifesaver
 from PIL import Image, ImageDraw, ImageFont
 from discord.ext import commands
-from lifesaver.bot import Cog, command
 
 from .converters import TierList
 from .utils import image_renderer, draw_word_wrap
@@ -167,8 +168,8 @@ def render_discord_logo(text: str):
         return base
 
 
-class ImgMod(Cog, name='Image manipulations'):
-    @command(typing=True, hidden=True, enabled=False)
+class ImgMod(lifesaver.Cog, name='Image manipulations'):
+    @lifesaver.command(typing=True, hidden=True, enabled=False)
     @standard_cooldown
     async def discordlogo(self, ctx, *, text):
         """Generates a Discord logo"""
@@ -177,18 +178,18 @@ class ImgMod(Cog, name='Image manipulations'):
             return
         await render_discord_logo(ctx, text)
 
-    @command(typing=True)
+    @lifesaver.command(typing=True)
     @standard_cooldown
     async def joy(self, ctx, bad, *, good):
         """This one sparks joy."""
         await render_spark_joy(ctx, bad, good)
 
-    @command(typing=True, hidden=True)
+    @lifesaver.command(typing=True, hidden=True)
     @commands.guild_only()
     @standard_cooldown
     async def tierlist(self, ctx, *groups: TierList):
         """Generates a tier list of your friends"""
-        if len(groups) == 0:
+        if not groups:
             await ctx.send("can't make a tier list outta nothing bud")
             return
 
@@ -201,7 +202,7 @@ class ImgMod(Cog, name='Image manipulations'):
 
         await render_tier_list(ctx, groups, avatars)
 
-    @command(typing=True)
+    @lifesaver.command(typing=True)
     @standard_cooldown
     async def brainmeme(self, ctx, *stages):
         """Generates a brain meme"""

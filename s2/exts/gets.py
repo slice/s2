@@ -4,8 +4,8 @@ import logging
 from collections import defaultdict
 
 import discord
+import lifesaver
 from discord.ext import commands
-from lifesaver.bot import Cog, group
 from lifesaver.utils import human_delta, pluralize
 
 log = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ async def wait_for_n_messages(bot, channel, *, messages: int, timeout: int, chec
     return True
 
 
-class Gets(Cog):
+class Gets(lifesaver.Cog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pending_gets = defaultdict(list)
@@ -141,7 +141,7 @@ class Gets(Cog):
             log.debug('elaborating get earner (notice: %r)', notice)
             await notice.edit(content=f'{msg.author.name}  \xb7  {win_message}')
 
-    @Cog.listener()
+    @lifesaver.Cog.listener()
     async def on_message(self, msg):
         if msg.webhook_id in self.webhooks:
             self.pending_gets[msg.guild.id].append(msg)
@@ -157,7 +157,7 @@ class Gets(Cog):
             await self.process_get(msg)
             del self.pending_gets[msg.guild.id]
 
-    @group()
+    @lifesaver.group()
     @commands.check(get_channel)
     async def gets(self, ctx):
         """༼ つ ◕_◕ ༽つ TAKE MY GETS ༼ つ ◕_◕ ༽つ"""

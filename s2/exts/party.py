@@ -2,10 +2,10 @@ import asyncio
 from random import choice
 
 import discord
+import lifesaver
 from discord import Permissions
 from discord.ext.commands import BucketType, cooldown
 from discord.http import Route
-from lifesaver.bot import Cog, Context, group
 
 PARTY_PERMISSIONS = {
     "add_reactions",
@@ -140,14 +140,14 @@ class Party:
         return cls(bot, creator, guild, duration)
 
 
-class PartyCog(Cog):
+class PartyCog(lifesaver.Cog):
     def __init__(self, bot):
         super().__init__(bot)
         self.parties = set()
 
-    @group(invoke_without_command=True, hidden=True, enabled=False)
+    @lifesaver.group(invoke_without_command=True, hidden=True, enabled=False)
     @cooldown(1, 60, BucketType.guild)
-    async def party(self, ctx: Context, dur_seconds: int = 5 * 60):
+    async def party(self, ctx: lifesaver.Context, dur_seconds: int = 5 * 60):
         """Creates a party."""
         if ctx.guild in map(lambda p: p.guild, self.parties):
             await ctx.send("parties can't be nested wtf")
@@ -191,7 +191,7 @@ class PartyCog(Cog):
                 self.parties.remove(party)
 
     @party.command(name="end")
-    async def party_end(self, ctx: Context):
+    async def party_end(self, ctx: lifesaver.Context):
         """Ends your party."""
         party = discord.utils.find(lambda p: p.creator == ctx.author, self.parties)
         if not party:
