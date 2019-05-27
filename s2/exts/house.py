@@ -15,12 +15,13 @@ class HouseConfig(lifesaver.config.Config):
 
 
 @executor_function
-def flip_avatar(buffer):
-    with Image.open(buffer) as image:
-        image = image.transpose(Image.FLIP_TOP_BOTTOM)
-        image.save(buffer, 'png')
+def flip_avatar(input_buffer):
+    with BytesIO() as buffer:
+        with Image.open(input_buffer) as image:
+            image = image.transpose(Image.FLIP_TOP_BOTTOM)
+            image.save(buffer, 'png')
 
-    buffer.seek(0)
+        return buffer.getvalue()
 
 
 @lifesaver.Cog.with_config(HouseConfig)
@@ -47,7 +48,7 @@ class House(lifesaver.Cog):
         await self.update_guild_icon(ctx.author)
         await ctx.ok()
 
-    @lifesaver.command(name='disguise')
+    @lifesaver.command(name='disguise', aliases=['steal_avatar'])
     @commands.is_owner()
     async def disguise_command(self, ctx: lifesaver.Context, target: discord.Member = None):
         """Steal someone's avatar"""
@@ -57,10 +58,10 @@ class House(lifesaver.Cog):
 
     async def steal_avatar(self, member):
         avatar = member.avatar_url_as(format='png', size=256)
-        with BytesIO() as buffer:
-            await avatar.save(buffer, seek_begin=True)
-            flipped_bytes = await flip_avatar(buffer)
-            await self.bot.user.edit(avatar=flipped_bytes.getvalue())
+        with BytesIO() as avatar_buffer:
+            await avatar.save(avatar_buffer, seek_begin=True)
+            flipped = await flip_avatar(avatar_buffer)
+            await self.bot.user.edit(avatar=flipped)
 
     async def update_emoji_listing(self):
         """Update the emoji listing in the #emojis channel."""
@@ -82,11 +83,8 @@ class House(lifesaver.Cog):
 
     async def update_guild_icon(self, slice):
         """Update the guild icon to slice's avatar."""
-        avatar_url = slice.avatar_url_as(format='png', size=256)
-
-        async with self.session.get(str(avatar_url)) as resp:
-            avatar_bytes = await resp.read()
-            await self.house.edit(icon=avatar_bytes, reason='slice changed his avatar')
+        avatar = slice.avatar_url_as(format='png', size=256)
+        await self.house.edit(icon=await avatar.read(), reason='slice changed his avatar')
 
     @lifesaver.Cog.listener()
     async def on_guild_emojis_update(self, guild, before, after):
