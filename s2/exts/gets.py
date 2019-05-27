@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+import typing
 from collections import defaultdict
 
 import discord
@@ -57,23 +58,18 @@ async def wait_for_n_messages(bot, channel, *, messages: int, timeout: int, chec
     return True
 
 
+class GetsConfig(lifesaver.config.Config):
+    webhooks: typing.List[int]
+    channels: typing.List[int]
+    debug: bool
+
+
+@lifesaver.Cog.with_config(GetsConfig)
 class Gets(lifesaver.Cog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pending_gets = defaultdict(list)
         self.locks = defaultdict(asyncio.Lock)
-
-    @property
-    def channels(self):
-        return self.bot.config.gets['channels']
-
-    @property
-    def webhooks(self):
-        return self.bot.config.gets['webhooks']
-
-    @property
-    def debug_mode(self):
-        return self.bot.config.gets.get('debug', False)
 
     async def get_account(self, user: discord.User):
         async with self.bot.db.execute("""
@@ -143,11 +139,11 @@ class Gets(lifesaver.Cog):
 
     @lifesaver.Cog.listener()
     async def on_message(self, msg):
-        if msg.webhook_id in self.webhooks:
+        if msg.webhook_id in self.config.webhooks:
             self.pending_gets[msg.guild.id].append(msg)
             return
 
-        if msg.channel.id not in self.channels:
+        if msg.channel.id not in self.config.channels:
             return
 
         async with self.locks[msg.guild.id]:

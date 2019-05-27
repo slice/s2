@@ -9,6 +9,13 @@ from lifesaver.utils.formatting import human_delta
 LASTFM_COLOR = discord.Color(0xB90000)
 
 
+class LastFMConfig(lifesaver.config.Config):
+    name: str
+    api_key: str
+    api_secret: str
+    registered_to: str
+
+
 class LastFMUser(commands.Converter):
     async def convert(self, ctx, argument):
         cog = ctx.command.cog
@@ -20,13 +27,14 @@ class LastFMUser(commands.Converter):
         return info
 
 
+@lifesaver.Cog.with_config(LastFMConfig)
 class LastFM(lifesaver.Cog, name='Last.fm'):
     def __init__(self, bot, *args, **kwargs):
         super().__init__(bot, *args, **kwargs)
 
         self.last_fm = pylast.LastFMNetwork(
-            api_key=bot.config.last_fm['api_key'],
-            api_secret=bot.config.last_fm['api_secret'],
+            api_key=self.config.api_key,
+            api_secret=self.config.api_secret,
         )
 
     def get_info(self, username):
