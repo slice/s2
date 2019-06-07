@@ -28,7 +28,7 @@ LEADERBOARD_MEDALS = [
 
 def get_channel(ctx):
     """A check that enforces commands to only be runnable from GET channels."""
-    return ctx.channel.id in ctx.cog.channels
+    return ctx.channel.id in ctx.cog.config.channels
 
 
 async def wait_for_n_messages(bot, channel, *, messages: int, timeout: int, check=None) -> bool:
