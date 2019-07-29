@@ -117,10 +117,10 @@ class Gets(lifesaver.Cog):
         await self.bot.db.commit()
         log.debug('committed get grab to database (target: %r, new_total: %d)', msg.author, new_total)
 
-        win_message = str(new_total)
+        win_message = f'{new_total:,}'
 
         if earned > 1:
-            win_message += f' (+{earned})'
+            win_message += f' (+{earned:,})'
 
         notice = await msg.channel.send(win_message)
 
@@ -175,16 +175,16 @@ class Gets(lifesaver.Cog):
             user_id = row[0]
             total_gets = row[1]
             user = ctx.bot.get_user(user_id)
-            gets = pluralize(get=total_gets)
+            gets = pluralize(get=total_gets, with_quantity=False)
 
             if not user:
                 user = '???'
 
             if index < 3:
                 medal = LEADERBOARD_MEDALS[index]
-                return f'{medal} **{user}** ({gets})'
+                return f'{medal} **{user}** ({total_gets:,} {gets})'
 
-            return f'{index + 1}. {user} ({gets})'
+            return f'{index + 1}. {user} ({total_gets:,} {gets})'
 
         listing = [
             format_row(index, row)
@@ -217,7 +217,7 @@ class Gets(lifesaver.Cog):
 
         embed = discord.Embed(title=str(target))
         last_ago = human_delta(account[3])
-        embed.add_field(name='Total GETs', value=str(account[1]))
+        embed.add_field(name='Total GETs', value=f'{account[1]:,}')
         embed.add_field(name='Last GET', value=f'{last_ago} ago')
         await ctx.send(embed=embed)
 
