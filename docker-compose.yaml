@@ -4,3 +4,4 @@ services:
     build: '.'
     volumes:
     - './:/app'
+    restart: unless-stopped
