@@ -26,33 +26,33 @@ class Roster:
     """A class that deals with the sets of players currently in the game."""
 
     def __init__(self, game, *, creator):
-        self.game = game
+        self.game: 'MafiaGame' = game
 
         #: The set of all alive members of the mafia.
-        self.mafia = set()
+        self.mafia: typing.Set[discord.Member] = set()
 
         #: The set of all players who have joined the game.
-        self.all = {creator}
+        self.all: typing.Set[discord.Member] = {creator}
 
         #: The set of all alive players.
-        self.players = {creator}
+        self.players: typing.Set[discord.Member] = {creator}
 
     @property
     def townies(self):
         """All players who aren't in the mafia."""
         return {player for player in self.players if player not in self.mafia}
 
-    def all_townies_dead(self):
+    def all_townies_dead(self) -> bool:
         """Return whether all townies are dead."""
-        return self.players - self.mafia == set()
+        return bool(self.players - self.mafia)
 
-    def pick_mafia(self, *, portion: int = 3, max: int = 2):
+    def pick_mafia(self, *, portion: int = 3, max: int = 2) -> typing.Set[discord.Member]:
         """Randomly determine the members of the mafia."""
         n_mafia = min(math.ceil(len(self.all) / portion), max)
         mafia = self.mafia = set(random.sample(self.all, n_mafia))
         return mafia
 
-    def is_alive(self, user):
+    def is_alive(self, user: discord.Member) -> bool:
         return user in self.players
 
     def kill(self, user):
@@ -126,7 +126,7 @@ class MafiaGame:
             formatted = '\n'.join(str(user) for user in self.roster.all)
 
             required = pluralize(player=required, with_indicative=True)
-            embed = discord.Embed(title='Players', description=formatted)
+            embed = discord.Embed(title='Mafia Lobby', description=formatted)
             embed.set_footer(text=f'{required} still needed')
             return embed
 
@@ -178,8 +178,7 @@ class MafiaGame:
             else:
                 await prompt.edit(embed=format_participants())
 
-        self.log.debug('we have enough players, creating game channel')
-
+    async def setup_game_area(self):
         # disallow @everyone and allow self
         overwrites = {
             self.guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -478,13 +477,19 @@ class MafiaGame:
 
     async def start(self):
         self.log.debug('game started! gathering players (%d needed).', self.REQUIRED_PLAYERS)
+
         success = await self.gather_players()
         if success is False:
             self.log.debug('hmm. game was aborted!')
             return
+
+        self.log.debug('we have enough players, creating game channel')
+        await self.setup_game_area()
+
         await self.pick_mafia()
         await self.notify_roles()
         await asyncio.sleep(5.0)
+
         self.state = MafiaGameState.STARTED
         await self.game_loop()
 
