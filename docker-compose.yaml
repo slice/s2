@@ -1,7 +1,0 @@
-version: '3.6'
-services:
-  bot:
-    build: '.'
-    volumes:
-    - './:/app'
-    restart: unless-stopped
