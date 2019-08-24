@@ -49,9 +49,7 @@ class EncodingJob:
 
     async def _add_buttons(self, message: discord.Message) -> None:
         buttons = lifesaver.Buttons(message, owner=self.owner)
-
         buttons.on("\N{cross mark}", self._delete_message)
-
         await buttons.add_reactions()
         buttons.listen(self.ctx.bot)
 
