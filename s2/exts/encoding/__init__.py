@@ -1,5 +1,4 @@
 import asyncio
-import os.path
 import typing as T
 
 import discord
@@ -7,7 +6,7 @@ import lifesaver
 from discord.ext import commands
 
 from .job import EncodingJob
-from .converters import Audio, SUPPORTED_EXTENSIONS_LISTING
+from .converters import Audio
 
 MAXIMUM_JOBS_RUNNING = 3
 
