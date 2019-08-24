@@ -6,6 +6,8 @@ import aiosqlite
 import lifesaver
 from discord.ext import commands
 
+from .schema import STATEMENTS
+
 
 @lifesaver.command(name='info', aliases=['about'])
 @commands.cooldown(1, 3, commands.BucketType.user)
@@ -38,25 +40,8 @@ class S2(lifesaver.Bot):
             await self.setup_db()
 
     async def create_tables(self):
-        await self.db.execute("""
-            CREATE TABLE IF NOT EXISTS voyager_gets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id BIGINT,
-                get_message_id BIGINT,
-                voyager_message_id BIGINT,
-                channel_id BIGINT,
-                guild_id BIGINT
-            )
-        """)
-
-        await self.db.execute("""
-            CREATE TABLE IF NOT EXISTS voyager_stats (
-                user_id BIGINT PRIMARY KEY,
-                total_gets INTEGER,
-                rank INTEGER,
-                last_get TIMESTAMP
-            )
-        """)
+        for statement in STATEMENTS:
+            await self.db.execute(statement)
 
         await self.db.commit()
 
