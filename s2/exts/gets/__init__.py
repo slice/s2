@@ -10,7 +10,7 @@ from lifesaver.utils import human_delta, pluralize
 from .checks import get_channel
 from .config import GetsConfig
 from .database import GetsDatabase
-from .strings import GAME_INFO, LEADERBOARD_MEDALS
+from .strings import GAME_INFO, LEADERBOARD_MEDALS, COLORS
 from .waiting import wait_for_n_messages
 
 log = logging.getLogger(__name__)
@@ -151,10 +151,13 @@ class Gets(lifesaver.Cog):
             await ctx.send(f"{ctx.tick(False)} {subject} collected any GETs yet.")
             return
 
-        embed = discord.Embed(title=str(target))
+        colors = [getattr(discord.Color, color_name)() for color_name in COLORS]
+        color = colors[target.id % len(colors)]
+
+        embed = discord.Embed(title=f"{account[1]:,} GETs", color=color)
+        embed.set_author(icon_url=target.avatar_url, name=target)
         last_ago = human_delta(account[3])
-        embed.add_field(name="Total GETs", value=f"{account[1]:,}")
-        embed.add_field(name="Last GET", value=f"{last_ago} ago")
+        embed.set_footer(text=f"Last GET was {last_ago} ago")
         await ctx.send(embed=embed)
 
     @gets.command(hidden=True)

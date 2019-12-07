@@ -1,5 +1,7 @@
 __all__ = ["GAME_INFO", "LEADERBOARD_MEDALS"]
 
+COLORS = {"magenta", "red", "orange", "gold", "green", "teal", "blue", "purple"}
+
 GAME_INFO = (
     "To earn a GET, send a message directly after a build notification is "
     "posted. (This only works in the same channel as the notification.) "
