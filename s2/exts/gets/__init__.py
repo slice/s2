@@ -99,7 +99,7 @@ class Gets(lifesaver.Cog):
             await self.process_get(msg)
             del self.pending_gets[msg.guild.id]
 
-    @lifesaver.group(aliases=["g"])
+    @lifesaver.group(aliases=["g"], hollow=True)
     @commands.check(get_channel)
     async def gets(self, ctx):
         """mary consumed my arteries"""
