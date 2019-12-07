@@ -39,7 +39,7 @@ class Perms(lifesaver.Cog, name="Permissions"):
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
     async def flatten_role(self, ctx: lifesaver.Context, *roles: discord.Role):
-        """Empties a role's permissions."""
+        """Makes a role purely cosmetic"""
         for role in roles:
             try:
                 await role.edit(permissions=discord.Permissions.none())
@@ -53,7 +53,7 @@ class Perms(lifesaver.Cog, name="Permissions"):
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
     async def clean_roles(self, ctx: lifesaver.Context):
-        """Cleans all unnecessary permissions from roles."""
+        """Removes useless permissions from roles"""
         everyone = ctx.guild.default_role
 
         pages = commands.Paginator(prefix="```diff", max_size=1000)
@@ -116,7 +116,7 @@ class Perms(lifesaver.Cog, name="Permissions"):
     @commands.guild_only()
     @commands.cooldown(1, 5, type=commands.BucketType.guild)
     async def lint_roles(self, ctx: lifesaver.Context):
-        """Shows roles with unnecessary permissions."""
+        """Shows roles with useless permissions"""
         indent = " " * 2
         lint_results = collections.defaultdict(list)
 
@@ -152,7 +152,7 @@ class Perms(lifesaver.Cog, name="Permissions"):
     @lifesaver.command()
     @commands.guild_only()
     async def perms(self, ctx: lifesaver.Context, target: discord.Member = None):
-        """Shows permissions for a user."""
+        """Shows a user's permissions"""
         target = target or ctx.author
         perms = target.guild_permissions
         embed = discord.Embed()

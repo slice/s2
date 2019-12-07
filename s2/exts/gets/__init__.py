@@ -99,14 +99,14 @@ class Gets(lifesaver.Cog):
             await self.process_get(msg)
             del self.pending_gets[msg.guild.id]
 
-    @lifesaver.group()
+    @lifesaver.group(aliases=["g"])
     @commands.check(get_channel)
     async def gets(self, ctx):
-        """༼ つ ◕_◕ ༽つ TAKE MY GETS ༼ つ ◕_◕ ༽つ"""
+        """mary consumed my arteries"""
 
     @gets.command(aliases=["leaderboard"])
     async def top(self, ctx):
-        """Shows the top GETters"""
+        """Shows the top GET earners"""
 
         users = await self.db.get_top_getters(10)
 
@@ -142,7 +142,7 @@ class Gets(lifesaver.Cog):
 
     @gets.command(aliases=["stats", "info"])
     async def profile(self, ctx, target: discord.Member = None):
-        """Shows your game profile"""
+        """Shows your profile"""
         target = target or ctx.author
         account = await self.db.fetch_account(target)
 
@@ -168,15 +168,27 @@ class Gets(lifesaver.Cog):
     @gets.command(hidden=True)
     @commands.is_owner()
     async def sink(self, ctx, target: discord.Member):
-        """Deletes all of a user's GETs"""
+        """Deletes all of someone's GETs
+
+        to be used when mary trashtalks react >:c
+        """
         await self.db.set_gets(target, 0)
         await self.bot.db.commit()
         await ctx.ok()
 
-    @gets.command(aliases=["what"])
-    async def wtf(self, ctx):
-        """Shows game info"""
-        await ctx.send(GAME_INFO.format(prefix=ctx.prefix))
+    @gets.command(aliases=["wtf", "what", "tut"])
+    async def tutorial(self, ctx):
+        """Shows game tutorial"""
+        game_info = GAME_INFO.format(prefix=ctx.prefix)
+        if ctx.can_send_embeds:
+            embed = discord.Embed(
+                title="How to earn GETs",
+                description=game_info,
+                color=discord.Color.blue(),
+            )
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(game_info)
 
 
 def setup(bot):

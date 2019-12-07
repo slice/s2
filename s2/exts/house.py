@@ -37,14 +37,14 @@ class House(lifesaver.Cog):
     @lifesaver.command()
     @commands.is_owner()
     async def update_listing(self, ctx: lifesaver.Context):
-        """Manually updates the emoji listing"""
+        """Updates the emoji listing"""
         await self.update_emoji_listing()
         await ctx.ok()
 
     @lifesaver.command()
     @commands.is_owner()
     async def update_icon(self, ctx: lifesaver.Context):
-        """Manually updates the guild icon"""
+        """Updates the server icon"""
         await self.update_guild_icon(ctx.author)
         await ctx.ok()
 
@@ -53,7 +53,7 @@ class House(lifesaver.Cog):
     async def disguise_command(
         self, ctx: lifesaver.Context, target: discord.Member = None
     ):
-        """Steal someone's avatar"""
+        """Steals someone's avatar"""
         target = target or ctx.author
         await self.steal_avatar(target)
         await ctx.ok()
@@ -66,7 +66,7 @@ class House(lifesaver.Cog):
             await self.bot.user.edit(avatar=flipped)
 
     async def update_emoji_listing(self):
-        """Update the emoji listing in the #emojis channel."""
+        """Updates the emoji listing in #emojis."""
         channel = self.house.get_channel(self.config.emojis_channel_id)
 
         emojis = sorted(self.house.emojis, key=lambda emoji: emoji.name)
@@ -82,7 +82,7 @@ class House(lifesaver.Cog):
         await channel.edit(topic=str(choice(self.house.emojis)))
 
     async def update_guild_icon(self, slice):
-        """Update the guild icon to slice's avatar."""
+        """Update the guild icon to slice's avatar"""
         avatar = slice.avatar_url_as(format="png", size=256)
         await self.house.edit(
             icon=await avatar.read(), reason="slice changed his avatar"

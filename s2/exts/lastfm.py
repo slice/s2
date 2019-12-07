@@ -63,7 +63,7 @@ class LastFM(lifesaver.Cog, name="Last.fm"):
     )
     @commands.cooldown(1, 3, commands.BucketType.user)
     async def last_fm_command(self, ctx, user: LastFMUser):
-        """Shows last.fm info."""
+        """Shows a Last.fm profile"""
 
         def format_played_track(played_track):
             timestamp = datetime.datetime.utcfromtimestamp(int(played_track.timestamp))
@@ -100,7 +100,7 @@ class LastFM(lifesaver.Cog, name="Last.fm"):
     @last_fm_command.command(aliases=["fav", "favs"], typing=True)
     @commands.cooldown(1, 3, commands.BucketType.user)
     async def favorites(self, ctx, user: LastFMUser):
-        """Shows a user's favorite tracks."""
+        """Shows a user's favorite tracks"""
 
         def format_item(item):
             track = item.item

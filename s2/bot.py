@@ -9,18 +9,10 @@ from discord.ext import commands
 from .schema import STATEMENTS
 
 
-@lifesaver.command(name="info", aliases=["about"])
-@commands.cooldown(1, 3, commands.BucketType.user)
-async def command_info(ctx):
-    """Shows information about the bot itself."""
-    await ctx.send(f"This bot is owned by slice#0001 (`97104885337575424`).")
-
-
 class S2(lifesaver.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db = None
-        self.add_command(command_info)
 
     async def setup_db(self):
         self.db = aiosqlite.connect(

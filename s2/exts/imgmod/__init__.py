@@ -184,7 +184,7 @@ class ImgMod(lifesaver.Cog, name="Image manipulations"):
     @lifesaver.command(typing=True, hidden=True, enabled=False)
     @standard_cooldown
     async def discordlogo(self, ctx, *, text):
-        """Generates a Discord logo"""
+        """Create your own Discord logo"""
         if not text:
             await ctx.send("put something")
             return
@@ -193,14 +193,14 @@ class ImgMod(lifesaver.Cog, name="Image manipulations"):
     @lifesaver.command(typing=True)
     @standard_cooldown
     async def joy(self, ctx, bad, *, good):
-        """This one sparks joy."""
+        '''"This one sparks joy."'''
         await render_spark_joy(ctx, bad, good)
 
     @lifesaver.command(typing=True, hidden=True)
     @commands.guild_only()
     @standard_cooldown
     async def tierlist(self, ctx, *groups: TierList):
-        """Generates a tier list of your friends"""
+        """Make a tier list of your friends"""
         if not groups:
             await ctx.send("can't make a tier list outta nothing bud")
             return
@@ -217,7 +217,7 @@ class ImgMod(lifesaver.Cog, name="Image manipulations"):
     @lifesaver.command(typing=True)
     @standard_cooldown
     async def brainmeme(self, ctx, *stages):
-        """Generates a brain meme"""
+        """Creates a brain meme"""
         if not stages:
             await ctx.send("put something")
             return

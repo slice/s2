@@ -22,7 +22,7 @@ class Encoding(lifesaver.Cog):
     async def command_audiofkr(
         self, ctx: lifesaver.Context, *, audio: T.Optional[Audio]
     ):
-        """fucks some audio"""
+        """Processes audio through random filters"""
         if audio is None:
             # Use the attached audio file. If there isn't one, `commands.BadArgument`
             # is raised.

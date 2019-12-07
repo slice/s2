@@ -148,7 +148,7 @@ class PartyCog(lifesaver.Cog):
     @lifesaver.group(invoke_without_command=True, hidden=True, enabled=False)
     @cooldown(1, 60, BucketType.guild)
     async def party(self, ctx: lifesaver.Context, dur_seconds: int = 5 * 60):
-        """Creates a party."""
+        """Creates a party"""
         if ctx.guild in map(lambda p: p.guild, self.parties):
             await ctx.send("parties can't be nested wtf")
             return
@@ -192,7 +192,7 @@ class PartyCog(lifesaver.Cog):
 
     @party.command(name="end")
     async def party_end(self, ctx: lifesaver.Context):
-        """Ends your party."""
+        """Ends your party"""
         party = discord.utils.find(lambda p: p.creator == ctx.author, self.parties)
         if not party:
             await ctx.send("u don't have a party atm")
