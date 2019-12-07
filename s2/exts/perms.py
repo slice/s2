@@ -14,7 +14,7 @@ def humanize_perm(perm: str) -> str:
 
 
 def diff_markers(marker, iterable):
-    return [f'{marker} {value}' for value in iterable]
+    return [f"{marker} {value}" for value in iterable]
 
 
 def names_of_perms(perms: discord.Permissions, *, is_granted: bool = True):
@@ -25,15 +25,17 @@ def diff_perms(before: discord.Permissions, after: discord.Permissions) -> str:
     before_n = names_of_perms(before)
     after_n = names_of_perms(after)
 
-    changes = diff_markers('+', after_n - before_n) \
-        + diff_markers('-', before_n - after_n) \
-        + diff_markers(' ', before_n & after_n)
+    changes = (
+        diff_markers("+", after_n - before_n)
+        + diff_markers("-", before_n - after_n)
+        + diff_markers(" ", before_n & after_n)
+    )
 
     return changes
 
 
-class Perms(lifesaver.Cog, name='Permissions'):
-    @lifesaver.command(aliases=['flatten_roles'])
+class Perms(lifesaver.Cog, name="Permissions"):
+    @lifesaver.command(aliases=["flatten_roles"])
     @commands.has_permissions(manage_roles=True)
     @commands.guild_only()
     async def flatten_role(self, ctx: lifesaver.Context, *roles: discord.Role):
@@ -41,9 +43,9 @@ class Perms(lifesaver.Cog, name='Permissions'):
         for role in roles:
             try:
                 await role.edit(permissions=discord.Permissions.none())
-                ctx += f'\N{MEMO} flattened {role.name}'
+                ctx += f"\N{MEMO} flattened {role.name}"
             except discord.HTTPException as err:
-                ctx += f'\N{LOCK WITH INK PEN} unable to flatten {role.name}: {err}'
+                ctx += f"\N{LOCK WITH INK PEN} unable to flatten {role.name}: {err}"
         await ctx.send_pages()
 
     @lifesaver.command()
@@ -54,10 +56,12 @@ class Perms(lifesaver.Cog, name='Permissions'):
         """Cleans all unnecessary permissions from roles."""
         everyone = ctx.guild.default_role
 
-        pages = commands.Paginator(prefix='```diff', max_size=1000)
+        pages = commands.Paginator(prefix="```diff", max_size=1000)
         interface = PaginatorInterface(ctx.bot, pages, owner=ctx.author)
 
-        pages.add_line('Removing unnecessary permission bits from all roles.', empty=True)
+        pages.add_line(
+            "Removing unnecessary permission bits from all roles.", empty=True
+        )
         await interface.send_to(ctx)
 
         def needs_cleaning(role):
@@ -69,12 +73,10 @@ class Perms(lifesaver.Cog, name='Permissions'):
 
             return has_duplicates and can_edit
 
-        cleanable_roles = [
-            role for role in ctx.guild.roles if needs_cleaning(role)
-        ]
+        cleanable_roles = [role for role in ctx.guild.roles if needs_cleaning(role)]
 
         if not cleanable_roles:
-            await interface.add_line('No roles need tidying up!', empty=True)
+            await interface.add_line("No roles need tidying up!", empty=True)
 
         for role in cleanable_roles:
             perms = role.permissions
@@ -82,24 +84,32 @@ class Perms(lifesaver.Cog, name='Permissions'):
             # remove all permissions that are already inherited from the default
             # role
             cleaned = discord.Permissions(perms.value)
-            cleaned.update(**{
-                name: False
-                for (name, value) in everyone.permissions if getattr(perms, name) == value
-            })
+            cleaned.update(
+                **{
+                    name: False
+                    for (name, value) in everyone.permissions
+                    if getattr(perms, name) == value
+                }
+            )
 
-            await interface.add_line(f'@@ {role.name}')
-            await interface.add_line(f'--- {hex(perms.value)} \N{RIGHTWARDS ARROW} {hex(cleaned.value)}')
+            await interface.add_line(f"@@ {role.name}")
+            await interface.add_line(
+                f"--- {hex(perms.value)} \N{RIGHTWARDS ARROW} {hex(cleaned.value)}"
+            )
             for change in diff_perms(perms, cleaned):
                 await interface.add_line(change)
             await interface.add_line()
 
             try:
                 await role.edit(permissions=cleaned)
-                await interface.add_line('+ Successfully cleaned up role.', empty=True)
+                await interface.add_line("+ Successfully cleaned up role.", empty=True)
             except discord.HTTPException:
-                await interface.add_line('- Failed to clean up role. (Likely a hierarchy problem.)', empty=True)
+                await interface.add_line(
+                    "- Failed to clean up role. (Likely a hierarchy problem.)",
+                    empty=True,
+                )
 
-        await interface.add_line('Done!')
+        await interface.add_line("Done!")
 
     @lifesaver.command(typing=True)
     @commands.has_permissions(manage_roles=True)
@@ -107,7 +117,7 @@ class Perms(lifesaver.Cog, name='Permissions'):
     @commands.cooldown(1, 5, type=commands.BucketType.guild)
     async def lint_roles(self, ctx: lifesaver.Context):
         """Shows roles with unnecessary permissions."""
-        indent = ' ' * 2
+        indent = " " * 2
         lint_results = collections.defaultdict(list)
 
         for role in ctx.guild.roles:
@@ -115,7 +125,7 @@ class Perms(lifesaver.Cog, name='Permissions'):
                 continue
 
             if not role.members:
-                lint_results[role.name].append('Nobody has this role.')
+                lint_results[role.name].append("Nobody has this role.")
 
             for (perm, value) in role.permissions:
                 default_perm = getattr(ctx.guild.default_role.permissions, perm)
@@ -124,18 +134,20 @@ class Perms(lifesaver.Cog, name='Permissions'):
                     lint_results[role.name].append(description)
 
         if not lint_results:
-            await ctx.send('this server is flawless!')
+            await ctx.send("this server is flawless!")
             return
 
-        output = ''
+        output = ""
         for role_name, descriptions in lint_results.items():
-            output += f'{role_name}\n'
-            output += '\n'.join(f'{indent} - {description}' for description in descriptions)
-            output += '\n\n'
+            output += f"{role_name}\n"
+            output += "\n".join(
+                f"{indent} - {description}" for description in descriptions
+            )
+            output += "\n\n"
 
         link = await upload(output)
         roles = pluralize(role=len(lint_results))
-        await ctx.send(f'{roles} are :( - {link}')
+        await ctx.send(f"{roles} are :( - {link}")
 
     @lifesaver.command()
     @commands.guild_only()

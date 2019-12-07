@@ -35,11 +35,12 @@ tier_colors = [
     (255, 127, 255),
 ]
 
+
 @image_renderer
 def render_spark_joy(bad, good):
-    image = Image.open('assets/spark_joy.jpg')
+    image = Image.open("assets/spark_joy.jpg")
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype('assets/Arial_Regular.ttf', 32)
+    font = ImageFont.truetype("assets/Arial_Regular.ttf", 32)
 
     draw_word_wrap(draw, font, bad, 500, 26, max_width=472)
     draw_word_wrap(draw, font, good, 500, 510, max_width=472)
@@ -56,16 +57,18 @@ def render_tier_list(groups, avatars):
     image_height = len(groups) * row_height
     name_padding = 20
 
-    font = ImageFont.truetype('assets/Arial_Regular.ttf', 16)
-    image = Image.new('RGB', (10, image_height), (49, 52, 58))
+    font = ImageFont.truetype("assets/Arial_Regular.ttf", 16)
+    image = Image.new("RGB", (10, image_height), (49, 52, 58))
     draw = ImageDraw.Draw(image)
 
     # calculate the true width of the image based on the longest name provided
-    longest_name = max(groups, key=lambda group: len(group['name']))['name']
-    longest_users = len(max(groups, key=lambda group: len(group['users']))['users'])
+    longest_name = max(groups, key=lambda group: len(group["name"]))["name"]
+    longest_users = len(max(groups, key=lambda group: len(group["users"]))["users"])
     longest_name_size = draw.textsize(longest_name, font)
     names_width = longest_name_size[0] + (name_padding * 2) + border
-    image_width = names_width + max(avatar_size * 8, longest_users * (avatar_size - 5) + 5)
+    image_width = names_width + max(
+        avatar_size * 8, longest_users * (avatar_size - 5) + 5
+    )
     image = image.resize((image_width, image_height))
 
     # make a new imagedraw for the new image
@@ -73,7 +76,7 @@ def render_tier_list(groups, avatars):
     draw = ImageDraw.Draw(image)
 
     for index, group in enumerate(list(groups)):
-        print(f'index: {index}, group: {group}')
+        print(f"index: {index}, group: {group}")
         y = row_height * index
 
         # draw group fill
@@ -85,38 +88,47 @@ def render_tier_list(groups, avatars):
         # draw group name
         draw.text(
             (name_padding, y + (row_height / 2) - (longest_name_size[1] / 2)),
-            group['name'], (0, 0, 0), font
+            group["name"],
+            (0, 0, 0),
+            font,
         )
 
         # draw bottom border
         bottom_border_y = y + row_height - border
         draw.line(
             [(0, bottom_border_y), (image_width, bottom_border_y)],
-            fill=(0, 0, 0), width=border,
+            fill=(0, 0, 0),
+            width=border,
         )
 
         # draw chat background border
         draw.line(
             [(names_width, bottom_border_y), (image_width, bottom_border_y)],
-            fill=(42, 45, 50), width=border,
+            fill=(42, 45, 50),
+            width=border,
         )
 
-        for user_index, user in enumerate(group['users']):
-            avatar = Image.open(fp=io.BytesIO(avatars[user.id]))\
-                .convert('RGBA')\
+        for user_index, user in enumerate(group["users"]):
+            avatar = (
+                Image.open(fp=io.BytesIO(avatars[user.id]))
+                .convert("RGBA")
                 .resize((avatar_size - 10, avatar_size - 10), resample=Image.BICUBIC)
+            )
 
             avatar_offset = user_index * (avatar_size - 5)
             avatar_x = names_width + avatar_offset + 5
             avatar_y = y + 5
 
             with avatar:
-                image.paste(avatar, (avatar_x, avatar_y), avatar,)
+                image.paste(
+                    avatar, (avatar_x, avatar_y), avatar,
+                )
 
     # draw border between names and users
     draw.line(
         [(names_width - border, 0), (names_width - border, image_height)],
-        fill=(0, 0, 0), width=border,
+        fill=(0, 0, 0),
+        width=border,
     )
 
     del draw
@@ -125,11 +137,11 @@ def render_tier_list(groups, avatars):
 
 @image_renderer
 def render_brain_meme(stages):
-    font = ImageFont.truetype('assets/Arial_Regular.ttf', 32)
-    base = Image.open('assets/brain_meme.png')
+    font = ImageFont.truetype("assets/Arial_Regular.ttf", 32)
+    base = Image.open("assets/brain_meme.png")
 
     # resize the image to fit the number of stages
-    image_height = sum(brain_heights[:len(stages)])
+    image_height = sum(brain_heights[: len(stages)])
     base = base.crop((0, 0, 599, image_height))
 
     draw = ImageDraw.Draw(base)
@@ -146,8 +158,8 @@ def render_brain_meme(stages):
 
 @image_renderer
 def render_discord_logo(text: str):
-    font = ImageFont.truetype('assets/Uni_Sans_Heavy.otf', 125)
-    base = Image.open('assets/discord_logo.png')
+    font = ImageFont.truetype("assets/Uni_Sans_Heavy.otf", 125)
+    base = Image.open("assets/discord_logo.png")
     draw = ImageDraw.Draw(base)
 
     text_size = draw.textsize(text, font)
@@ -168,13 +180,13 @@ def render_discord_logo(text: str):
         return base
 
 
-class ImgMod(lifesaver.Cog, name='Image manipulations'):
+class ImgMod(lifesaver.Cog, name="Image manipulations"):
     @lifesaver.command(typing=True, hidden=True, enabled=False)
     @standard_cooldown
     async def discordlogo(self, ctx, *, text):
         """Generates a Discord logo"""
         if not text:
-            await ctx.send('put something')
+            await ctx.send("put something")
             return
         await render_discord_logo(ctx, text)
 
@@ -193,10 +205,10 @@ class ImgMod(lifesaver.Cog, name='Image manipulations'):
             await ctx.send("can't make a tier list outta nothing bud")
             return
 
-        users = itertools.chain.from_iterable([group['users'] for group in groups])
+        users = itertools.chain.from_iterable([group["users"] for group in groups])
         avatars = {}
         for user in set(users):
-            avatar = user.avatar_url_as(format='png', static_format='png', size=64)
+            avatar = user.avatar_url_as(format="png", static_format="png", size=64)
             async with self.session.get(str(avatar)) as resp:
                 avatars[user.id] = await resp.read()
 
@@ -207,10 +219,10 @@ class ImgMod(lifesaver.Cog, name='Image manipulations'):
     async def brainmeme(self, ctx, *stages):
         """Generates a brain meme"""
         if not stages:
-            await ctx.send('put something')
+            await ctx.send("put something")
             return
         if len(stages) > 8:
-            await ctx.send('too many stages')
+            await ctx.send("too many stages")
             return
         await render_brain_meme(ctx, stages)
 

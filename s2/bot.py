@@ -1,4 +1,4 @@
-__all__ = ['S2']
+__all__ = ["S2"]
 
 import sqlite3
 
@@ -9,11 +9,11 @@ from discord.ext import commands
 from .schema import STATEMENTS
 
 
-@lifesaver.command(name='info', aliases=['about'])
+@lifesaver.command(name="info", aliases=["about"])
 @commands.cooldown(1, 3, commands.BucketType.user)
 async def command_info(ctx):
     """Shows information about the bot itself."""
-    await ctx.send(f'This bot is owned by slice#0001 (`97104885337575424`).')
+    await ctx.send(f"This bot is owned by slice#0001 (`97104885337575424`).")
 
 
 class S2(lifesaver.Bot):
@@ -23,8 +23,9 @@ class S2(lifesaver.Bot):
         self.add_command(command_info)
 
     async def setup_db(self):
-        self.db = aiosqlite.connect('s2.db', loop=self.loop,
-                                    detect_types=sqlite3.PARSE_DECLTYPES)
+        self.db = aiosqlite.connect(
+            "s2.db", loop=self.loop, detect_types=sqlite3.PARSE_DECLTYPES
+        )
 
         # connect manually without a context manager
         self.db.start()

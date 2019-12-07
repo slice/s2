@@ -79,7 +79,7 @@ class Party:
         # --- step 3.  create party role for the creator
         self.creator_role = creator = await self.guild.create_role(
             name="party creator",
-            color=discord.Color(0xff6666),
+            color=discord.Color(0xFF6666),
             hoist=True,
             mentionable=True,
             permissions=Permissions.all(),
@@ -87,7 +87,7 @@ class Party:
 
         # --- step 4.  partygoers need a role
         self.partygoer_role = partygoer = await self.guild.create_role(
-            name="partygoer", color=discord.Color(0x66ccff), hoist=True
+            name="partygoer", color=discord.Color(0x66CCFF), hoist=True
         )
 
         # --- step 5.  move roles

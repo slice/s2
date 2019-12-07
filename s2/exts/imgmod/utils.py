@@ -10,11 +10,13 @@ def image_renderer(func):
 
     @functools.wraps(func)
     async def wrapper(ctx, *args, **kwargs):
-        image = await loop.run_in_executor(None, functools.partial(func, *args, **kwargs))
+        image = await loop.run_in_executor(
+            None, functools.partial(func, *args, **kwargs)
+        )
 
         def render():
             buffer = BytesIO()
-            image.save(fp=buffer, format='png')
+            image.save(fp=buffer, format="png")
             buffer.seek(0)
             return buffer
 
@@ -22,14 +24,14 @@ def image_renderer(func):
 
         image.close()
 
-        await ctx.send(file=discord.File(buffer, 'image.png'))
+        await ctx.send(file=discord.File(buffer, "image.png"))
 
     return wrapper
 
 
 def wrap_single_word(draw, font, word, *, max_width):
     chunks = []
-    current_chunk = ''
+    current_chunk = ""
     current_width = 0
 
     for letter in word:
@@ -38,7 +40,7 @@ def wrap_single_word(draw, font, word, *, max_width):
 
         if current_width > max_width:
             chunks.append(current_chunk)
-            current_chunk = ''
+            current_chunk = ""
             current_width = 0
 
     if current_chunk:
@@ -70,7 +72,7 @@ def draw_word_wrap(draw, font, text, xpos=0, ypos=0, *, max_width, fill=(0, 0, 0
     """
     total_width, line_height = draw.textsize(text, font=font)
     lines = []
-    space_width = draw.textsize(' ', font=font)[0]
+    space_width = draw.textsize(" ", font=font)[0]
     remaining = max_width
 
     for word in text.split():
@@ -90,7 +92,7 @@ def draw_word_wrap(draw, font, text, xpos=0, ypos=0, *, max_width, fill=(0, 0, 0
             else:
                 # add this word to the last line
                 new_line = lines.pop()
-                new_line += ' ' + word
+                new_line += " " + word
                 lines.append(new_line)
             remaining -= word_width + space_width
 
