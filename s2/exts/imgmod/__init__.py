@@ -37,7 +37,7 @@ tier_colors = [
 
 
 @image_renderer
-def render_spark_joy(bad, good):
+def render_spark_joy(good, bad):
     image = Image.open("assets/spark_joy.jpg")
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype("assets/Arial_Regular.ttf", 32)
@@ -192,9 +192,9 @@ class ImgMod(lifesaver.Cog, name="Image manipulations"):
 
     @lifesaver.command(typing=True)
     @standard_cooldown
-    async def joy(self, ctx, bad, *, good):
+    async def joy(self, ctx, good, *, bad):
         '''"This one sparks joy."'''
-        await render_spark_joy(ctx, bad, good)
+        await render_spark_joy(ctx, good, bad)
 
     @lifesaver.command(typing=True, hidden=True)
     @commands.guild_only()
