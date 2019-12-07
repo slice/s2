@@ -140,7 +140,7 @@ class Gets(lifesaver.Cog):
         embed.set_footer(text="An efficient use of human energy indeed.")
         await ctx.send(embed=embed)
 
-    @gets.command(aliases=["stats", "info"])
+    @gets.command(aliases=["p"])
     async def profile(self, ctx, target: discord.Member = None):
         """Shows your profile"""
         target = target or ctx.author
