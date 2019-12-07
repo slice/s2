@@ -42,3 +42,7 @@ class S2Help(commands.DefaultHelpCommand):
             self.paginator.add_line(note)
 
         await self.send_pages()
+
+    def get_ending_note(self) -> str:
+        ending_note = super().get_ending_note()
+        return ending_note.splitlines()[0]
