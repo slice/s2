@@ -168,10 +168,7 @@ class Gets(lifesaver.Cog):
     @gets.command(hidden=True)
     @commands.is_owner()
     async def sink(self, ctx, target: discord.Member):
-        """Deletes all of someone's GETs
-
-        to be used when mary trashtalks react >:c
-        """
+        """Deletes all of someone's GETs"""
         await self.db.set_gets(target, 0)
         await self.bot.db.commit()
         await ctx.ok()
