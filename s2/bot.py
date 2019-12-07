@@ -5,12 +5,17 @@ import sqlite3
 import aiosqlite
 import lifesaver
 
+from .help import S2Help
 from .schema import STATEMENTS
 
 
 class S2(lifesaver.Bot):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, cfg: lifesaver.bot.BotConfig, **kwargs) -> None:
+        super().__init__(
+            cfg,
+            help_command=S2Help(dm_help=cfg.dm_help, no_category="Commands"),
+            **kwargs,
+        )
         self.db = None
 
     async def setup_db(self) -> None:
