@@ -1,3 +1,3 @@
 # s2
 
-an experimental discord bot :)
+experimental discord bot testbed
