@@ -1,6 +1,7 @@
 import asyncio
 import collections
 import logging
+import typing as T
 
 import discord
 import lifesaver
@@ -25,11 +26,15 @@ class Gets(lifesaver.Cog):
         #: A list of messages from VersionVoyager that haven't been GETted yet.
         #: This is a :class:`collections.defaultdict`, with guild ID keys and a
         #: list of :class:`discord.Message`s for the values.
-        self.pending_gets = collections.defaultdict(list)
+        self.pending_gets: T.DefaultDict[
+            int, T.List[discord.Message]
+        ] = collections.defaultdict(list)
 
         #: A :class:`collections.defaultdict` of guild IDs to :class:`asyncio.Lock`s.
         #: Used to ensure that there aren't any race conditions.
-        self.locks = collections.defaultdict(asyncio.Lock)
+        self.locks: T.DefaultDict[int, asyncio.Lock] = collections.defaultdict(
+            asyncio.Lock
+        )
 
     async def process_get(self, msg: discord.Message):
         """Process an earned GET from a message."""
