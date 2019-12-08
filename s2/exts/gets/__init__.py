@@ -38,6 +38,7 @@ class Gets(lifesaver.Cog):
 
     async def process_get(self, msg: discord.Message):
         """Process an earned GET from a message."""
+        assert msg.guild is not None
         log.debug("processing get grab (message: %r)", msg)
 
         account = await self.db.ensure_account(msg.author)
@@ -160,7 +161,7 @@ class Gets(lifesaver.Cog):
         color = colors[target.id % len(colors)]
 
         embed = discord.Embed(title=f"{account[1]:,} GETs", color=color)
-        embed.set_author(icon_url=target.avatar_url, name=target)
+        embed.set_author(icon_url=target.avatar_url, name=str(target))
         last_ago = human_delta(account[3])
         embed.set_footer(text=f"Last GET was {last_ago} ago")
         await ctx.send(embed=embed)
