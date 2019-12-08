@@ -153,7 +153,7 @@ class Gets(lifesaver.Cog):
 
         if account is None:
             subject = "You haven't" if target == ctx.author else f"{target} hasn't"
-            await ctx.send(f"{ctx.tick(False)} {subject} collected any GETs yet.")
+            await ctx.send(f"{ctx.tick(False)} {subject} doesn't have any GETs yet.")
             return
 
         colors = [getattr(discord.Color, color_name)() for color_name in COLORS]
