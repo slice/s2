@@ -30,6 +30,11 @@ class Gets(lifesaver.Cog):
             int, T.List[discord.Message]
         ] = collections.defaultdict(list)
 
+        #: The global transaction lock. This should be locked when any kind of
+        #: transaction is taking place (e.g. adding GETs or updating an
+        #: account's total GETs.)
+        self.global_transaction_lock = asyncio.Lock()
+
         #: A :class:`collections.defaultdict` of guild IDs to :class:`asyncio.Lock`s.
         #: Used to ensure that there aren't any race conditions.
         self.locks: T.DefaultDict[int, asyncio.Lock] = collections.defaultdict(
@@ -42,36 +47,43 @@ class Gets(lifesaver.Cog):
 
         log.debug("processing get grab (message: %r)", msg)
 
-        account = await self.db.ensure_account(msg.author)
+        async with self.global_transaction_lock:
+            account = await self.db.ensure_account(msg.author)
 
-        voyager_messages = self.pending_gets[msg.guild.id]
-        gets_earned = len(voyager_messages)
+            voyager_messages = self.pending_gets[msg.guild.id]
+            gets_earned = len(voyager_messages)
 
-        # update total amount of gets earned
-        await self.db.add_gets(msg.author, gets_earned)
+            # update total amount of gets earned
+            await self.db.add_gets(msg.author, gets_earned)
 
-        individual_get_params = [
-            [msg.author.id, msg.id, voyager_message.id, msg.channel.id, msg.guild.id]
-            for voyager_message in voyager_messages
-        ]
+            individual_get_params = [
+                [
+                    msg.author.id,
+                    msg.id,
+                    voyager_message.id,
+                    msg.channel.id,
+                    msg.guild.id,
+                ]
+                for voyager_message in voyager_messages
+            ]
 
-        # track the individual gets for each voyager message earned
-        await self.bot.db.executemany(
-            """
-            INSERT INTO voyager_gets (user_id, get_message_id, voyager_message_id, channel_id, guild_id)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            individual_get_params,
-        )
+            # track the individual gets for each voyager message earned
+            await self.bot.db.executemany(
+                """
+                INSERT INTO voyager_gets (user_id, get_message_id, voyager_message_id, channel_id, guild_id)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                individual_get_params,
+            )
 
-        new_total = account[1] + gets_earned
+            new_total = account[1] + gets_earned
 
-        await self.bot.db.commit()
-        log.debug(
-            "committed get grab to database (target: %r, new_total: %d)",
-            msg.author,
-            new_total,
-        )
+            await self.bot.db.commit()
+            log.debug(
+                "committed get grab to database (target: %r, new_total: %d)",
+                msg.author,
+                new_total,
+            )
 
         win_message = f"{new_total:,}"
 
@@ -176,16 +188,18 @@ class Gets(lifesaver.Cog):
     @commands.is_owner()
     async def write(self, ctx, target: discord.Member, amount: int):
         """Writes the amount of GETs for a user"""
-        await self.db.set_gets(target, amount)
-        await self.bot.db.commit()
+        async with self.global_transaction_lock:
+            await self.db.set_gets(target, amount)
+            await self.bot.db.commit()
         await ctx.ok()
 
     @gets.command(hidden=True)
     @commands.is_owner()
     async def sink(self, ctx, target: discord.Member):
         """Deletes all of someone's GETs"""
-        await self.db.set_gets(target, 0)
-        await self.bot.db.commit()
+        async with self.global_transaction_lock:
+            await self.db.set_gets(target, 0)
+            await self.bot.db.commit()
         await ctx.ok()
 
     @gets.command(aliases=["wtf", "what", "tut"])
