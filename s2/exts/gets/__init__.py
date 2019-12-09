@@ -39,26 +39,32 @@ class Gets(lifesaver.Cog):
     async def process_get(self, msg: discord.Message):
         """Process an earned GET from a message."""
         assert msg.guild is not None
+
         log.debug("processing get grab (message: %r)", msg)
 
         account = await self.db.ensure_account(msg.author)
 
-        get_messages = self.pending_gets[msg.guild.id]
-        earned = len(get_messages)
+        voyager_messages = self.pending_gets[msg.guild.id]
+        gets_earned = len(voyager_messages)
 
         # update total amount of gets earned
-        await self.db.add_gets(msg.author, earned)
+        await self.db.add_gets(msg.author, gets_earned)
 
-        # add the individual get
-        await self.bot.db.execute(
+        individual_get_params = [
+            [msg.author.id, msg.id, voyager_message.id, msg.channel.id, msg.guild.id]
+            for voyager_message in voyager_messages
+        ]
+
+        # track the individual gets for each voyager message earned
+        await self.bot.db.executemany(
             """
             INSERT INTO voyager_gets (user_id, get_message_id, voyager_message_id, channel_id, guild_id)
             VALUES (?, ?, ?, ?, ?)
             """,
-            [msg.author.id, msg.id, get_messages[-1].id, msg.channel.id, msg.guild.id],
+            individual_get_params,
         )
 
-        new_total = account[1] + earned
+        new_total = account[1] + gets_earned
 
         await self.bot.db.commit()
         log.debug(
@@ -69,8 +75,8 @@ class Gets(lifesaver.Cog):
 
         win_message = f"{new_total:,}"
 
-        if earned > 1:
-            win_message += f" (+{earned:,})"
+        if gets_earned > 1:
+            win_message += f" (+{gets_earned:,})"
 
         notice = await msg.channel.send(win_message)
 
