@@ -107,10 +107,35 @@ class Gets(lifesaver.Cog):
             log.debug("elaborating get earner (notice: %r)", notice)
             await notice.edit(content=f"{msg.author.name}  \xb7  {win_message}")
 
+    def is_prohibited(self, msg: discord.Message) -> bool:
+        stop_phrase = "[gets:prohibit]"
+        stop_in_embed = False
+
+        if msg.embeds:
+            embed = msg.embeds[0]
+            targets = {embed.footer.text, embed.description}
+            stop_in_embed = any(
+                stop_phrase in target
+                for target in targets
+                if target is not discord.Embed.Empty
+            )
+
+        return stop_phrase in msg.content or stop_in_embed
+
+    async def prime_get(self, msg: discord.Message) -> None:
+        if self.is_prohibited(msg):
+            try:
+                await msg.add_reaction("\N{no entry sign}")
+            except discord.HTTPException:
+                pass
+            return
+
+        self.pending_gets[msg.guild.id].append(msg)
+
     @lifesaver.Cog.listener()
     async def on_message(self, msg):
         if msg.webhook_id in self.config.webhooks:
-            self.pending_gets[msg.guild.id].append(msg)
+            await self.prime_get(msg)
             return
 
         if msg.channel.id not in self.config.channels:
