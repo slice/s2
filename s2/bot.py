@@ -44,5 +44,5 @@ class S2(lifesaver.Bot):
 
     def _hide(self, command_name: str) -> None:
         command = self.get_command(command_name)
-        if command:
+        if command is not None:
             command.hidden = True
