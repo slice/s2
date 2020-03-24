@@ -1,11 +1,13 @@
 __all__ = ["GetsDatabase"]
 
 import datetime
-import lifesaver
 import typing as T
 
 import aiosqlite
+import lifesaver
 import discord
+
+Person = T.Union[discord.User, discord.Member]
 
 
 class GetsDatabase:
@@ -20,7 +22,8 @@ class GetsDatabase:
         """Fetch the top GETters."""
         async with self.db.execute(
             """
-            SELECT * FROM voyager_stats
+            SELECT *
+            FROM voyager_stats
             ORDER BY total_gets DESC
             LIMIT ?
             """,
@@ -28,19 +31,21 @@ class GetsDatabase:
         ) as cur:
             return await cur.fetchall()
 
-    async def fetch_account(self, user: discord.abc.Messageable) -> aiosqlite.Row:
+    async def fetch_account(self, user: Person) -> aiosqlite.Row:
         """Fetch account information for a user."""
         async with self.db.execute(
             """
-            SELECT * FROM voyager_stats
+            SELECT *
+            FROM voyager_stats
             WHERE user_id = ?
+            LIMIT 1
             """,
             [user.id],
         ) as cur:
             result = await cur.fetchone()
             return result
 
-    async def ensure_account(self, user: discord.abc.Messageable) -> aiosqlite.Row:
+    async def ensure_account(self, user: Person) -> aiosqlite.Row:
         """Fetch account information for a user.
 
         The account is created if it doesn't exist.
@@ -52,7 +57,7 @@ class GetsDatabase:
             await self.create_account(user)
             return await self.fetch_account(user)
 
-    async def set_gets(self, user: discord.abc.Messageable, amount: int) -> None:
+    async def set_gets(self, user: Person, amount: int) -> None:
         """Set a user's total GET count."""
         await self.db.execute(
             """
@@ -63,7 +68,7 @@ class GetsDatabase:
             [amount, user.id],
         )
 
-    async def add_gets(self, user: discord.abc.Messageable, amount: int) -> None:
+    async def add_gets(self, user: Person, amount: int) -> None:
         """Add to a user's total GET count."""
         await self.db.execute(
             """
@@ -74,7 +79,7 @@ class GetsDatabase:
             [amount, datetime.datetime.utcnow(), user.id],
         )
 
-    async def create_account(self, user: discord.abc.Messageable) -> None:
+    async def create_account(self, user: Person) -> None:
         """Create an account for a user."""
         await self.db.execute(
             """
