@@ -125,7 +125,9 @@ class Party:
 
     @classmethod
     async def create(cls, *, creator: discord.User, bot, session, duration):
-        async with session.get(creator.avatar_url_as(format="png")) as avatar:
+        creator_avatar = creator.avatar_url_as(format="png")
+
+        async with session.get(str(creator_avatar)) as avatar:
             avatar = await avatar.read()
 
         guild = await bot.create_guild(
