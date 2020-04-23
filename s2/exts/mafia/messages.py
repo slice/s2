@@ -161,5 +161,5 @@ GOODBYE = (
 
 FILLING_PROGRESS = (
     "\N{SLEEPING SYMBOL} **Waiting for everyone to join...**\n\n"
-    "Players who still need to join:\n{waiting_on}"
+    "Players who still need to join:\n\n{waiting_on}"
 )
