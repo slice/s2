@@ -954,6 +954,9 @@ class MafiaGame:
             await self._game_loop_task
         except asyncio.CancelledError:
             self.log.info("game was cancelled, proceeding as normal")
+        except Exception as err:
+            self.log.exception("error during main game loop")
+            await self.all_chat.send(msg(messages.SOMETHING_BROKE, error=err))
 
         await self._goodbye()
 
