@@ -28,7 +28,8 @@ MAFIA_GREET = (
 
 INVESTIGATOR_GREET = (
     "{mention}: Hello there, investigator! Here you will be able to visit "
-    "someone's house every night and determine their suspiciousness."
+    "someone's house every night and determine their suspiciousness. "
+    "This is vital to defeating the mafia!"
 )
 
 MAFIA_KILL_PROMPT = (
