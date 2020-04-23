@@ -164,9 +164,6 @@ class MafiaGame:
         #: The message that shows who still needs to join.
         self._filling_message: Optional[discord.Message] = None
 
-    #: The number of players required before the game can automatically started.
-    REQUIRED_PLAYERS = 8
-
     #: Debugging mode. Shortens some wait times.
     DEBUG = False
 
@@ -259,23 +256,25 @@ class MafiaGame:
     async def _gather_players(self) -> bool:
         """Interactively gather game participants."""
         self.log.info("gathering players for game")
+        bare_minimum = 3
         lobby = self.lobby_channel
 
         def embed() -> str:
-            required = self.REQUIRED_PLAYERS - len(self.roster.all)
+            required = 3 - len(self.roster.all)
+            required_text = pluralize(player=required, with_indicative=True)
 
-            required = pluralize(player=required, with_indicative=True)
             embed = discord.Embed(
                 title="Mafia Lobby",
                 description=user_listing(self.roster.all),
                 color=discord.Color.gold(),
             )
             embed.set_author(name=str(self.creator), icon_url=self.creator.avatar_url)
-            embed.set_footer(text=f"{required} still needed")
+            if required > 0:
+                embed.set_footer(text=f"{required_text} required")
             return embed
 
         join_emoji = "\N{RAISED HAND WITH FINGERS SPLAYED}"
-        force_start_emoji = "\N{WHITE HEAVY CHECK MARK}"
+        start_emoji = "\N{WHITE HEAVY CHECK MARK}"
         abort_emoji = "\N{CROSS MARK}"
 
         prompt = await lobby.send(
@@ -283,6 +282,7 @@ class MafiaGame:
             embed=embed(),
         )
         await prompt.add_reaction(join_emoji)
+        await prompt.add_reaction(abort_emoji)
 
         def reaction_check(reaction, user):
             return reaction.message.id == prompt.id and not user.bot
@@ -292,10 +292,10 @@ class MafiaGame:
                 "reaction_add", check=reaction_check
             )
 
-            if reaction.emoji not in (join_emoji, force_start_emoji, abort_emoji):
+            if reaction.emoji not in (join_emoji, start_emoji, abort_emoji):
                 continue
 
-            overriding = reaction.emoji == force_start_emoji and user == self.creator
+            starting = reaction.emoji == start_emoji and user == self.creator
             is_aborting = reaction.emoji == abort_emoji and user == self.creator
 
             if is_aborting:
@@ -310,10 +310,14 @@ class MafiaGame:
                 self.roster.add(user)
                 await prompt.edit(embed=embed())
 
-            if len(self.roster.all) == self.REQUIRED_PLAYERS or overriding:
+                if len(self.roster.all) >= bare_minimum:
+                    # 3 is the bare minimum
+                    await prompt.add_reaction(start_emoji)
+
+            if starting:
                 # time to start!
 
-                if len(self.roster.all) < 3 and overriding:
+                if len(self.roster.all) < bare_minimum:
                     await lobby.send(
                         msg(
                             messages.LOBBY_CANT_FORCE_START,
@@ -329,9 +333,7 @@ class MafiaGame:
                 except discord.HTTPException:
                     pass
 
-                break
-
-        return True
+                return True
 
     async def _setup_game_area(self) -> None:
         """Create and prepare the game area."""
@@ -900,9 +902,7 @@ class MafiaGame:
 
     async def start(self) -> None:
         """Gather participants and start the game."""
-        self.log.info(
-            "game starting... gathering players (%d needed).", self.REQUIRED_PLAYERS
-        )
+        self.log.info("game starting...")
 
         success = await self._gather_players()
         if success is False:
