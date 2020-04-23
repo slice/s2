@@ -558,7 +558,7 @@ class MafiaGame:
             await self.gator_house.send(
                 msg(message, mention=self.roster.investigator.mention)
             )
-
+            self.gator_visiting = None
         if self.victim_tonight is not None:
             await self._kill(self.victim_tonight)
             # the value is cleared tomorrow morning
