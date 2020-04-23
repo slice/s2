@@ -683,9 +683,7 @@ class MafiaGame:
             + "\n\n"
             + msg(listing_msg, users=user_listing(self.roster.alive_mafia))
         )
-        await self.all_chat.send(
-            msg(messages.THANK_YOU, mentions=mention_set(self.roster.all))
-        )
+        await self.all_chat.send(msg(messages.THANK_YOU))
 
         await asyncio.sleep(2.0)
         await self.alltalk()
