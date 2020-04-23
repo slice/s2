@@ -766,11 +766,10 @@ class MafiaGame:
         if self.victim_tonight:
             # they already died the night before; reset!
             role = self._get_role_str(self.victim_tonight)
-            self.victim_tonight = None
-
             await self.all_chat.send(
                 msg(messages.FOUND_DEAD, victim=self.victim_tonight)
             )
+            self.victim_tonight = None
             await asyncio.sleep(3.0)
             await self.all_chat.send(msg(messages.THEY_ROLE, role=role))
             await asyncio.sleep(5.0)
