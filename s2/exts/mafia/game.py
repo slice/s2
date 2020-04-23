@@ -14,6 +14,7 @@ from typing import (DefaultDict, Dict, List, Optional, Sequence, Set, Tuple,
                     Union)
 
 import discord
+import fuzzywuzzy.process as fw_process
 
 from lifesaver.utils import pluralize
 
@@ -43,12 +44,23 @@ def basic_command(name: str, inp: str) -> Optional[str]:
 def select_member(
     selector: str, members: Set[discord.Member]
 ) -> Optional[discord.Member]:
-    return discord.utils.find(
+    direct_match = discord.utils.find(
         lambda member: str(member).lower() == selector.lower()
         or member.name.lower() == selector.lower()
         or str(member.id) == selector,
         members,
     )
+
+    if direct_match is not None:
+        return direct_match
+
+    mapping = {member.id: member.name for member in members}
+    _, score, selected_id = fw_process.extractOne(selector, mapping)
+
+    if score > 50:  # arbitrary threshold
+        return discord.utils.find(lambda member: member.id == selected_id, members)
+
+    return None
 
 
 def user_listing(users: Union[Sequence[discord.User], Set[discord.User]]) -> str:
@@ -594,55 +606,47 @@ class MafiaGame:
 
         while True:
             message = await self.bot.wait_for("message", check=check)
+            selector = basic_command("!vote", message.content)
 
-            if not message.content.startswith("!vote "):
+            if not selector:
                 continue
 
-            try:
-                target_name = message.content[len("!vote ") :]
+            target = select_member(selector, self.roster.alive)
 
-                target = discord.utils.find(
-                    lambda player: player.name.lower() == target_name.lower()
-                    or player.mention == target_name,
-                    self.roster.alive,
-                )
+            if not target or target == message.author:
+                await message.add_reaction(self.bot.emoji("generic.no"))
+                continue
 
-                if not target or target == message.author:
-                    await message.add_reaction(self.bot.emoji("generic.no"))
+            self.log.debug("%s is voting to hang %s", message.author, target)
+
+            if has_voted(message.author):
+                previous_target = get_vote(message.author)
+
+                if previous_target == target.id:
+                    # voter has already voted for this person
+                    await self.all_chat.send(
+                        msg(
+                            messages.ALREADY_VOTED_FOR,
+                            voter=message.author.mention,
+                            target=target,
+                        )
+                    )
                     continue
 
-                self.log.debug("%s is voting to hang %s", message.author, target)
+                # remove the vote for the other person (switching votes!)
+                self.hanging_votes[previous_target].remove(message.author.id)
 
-                if has_voted(message.author):
-                    previous_target = get_vote(message.author)
+            self.hanging_votes[target.id].append(message.author.id)
 
-                    if previous_target == target.id:
-                        # voter has already voted for this person
-                        await self.all_chat.send(
-                            msg(
-                                messages.ALREADY_VOTED_FOR,
-                                voter=message.author.mention,
-                                target=target,
-                            )
-                        )
-                        continue
+            voted = msg(messages.VOTED_FOR, voter=message.author, target=target)
+            voted += "\n\n"
+            voted += "\n".join(
+                msg(messages.VOTES_ENTRY, mention=f"<@{key}>", votes=len(value))
+                for key, value in self.hanging_votes.items()
+                if value
+            )
 
-                    # remove the vote for the other person (switching votes!)
-                    self.hanging_votes[previous_target].remove(message.author.id)
-
-                self.hanging_votes[target.id].append(message.author.id)
-
-                voted = msg(messages.VOTED_FOR, voter=message.author, target=target)
-                voted += "\n\n"
-                voted += "\n".join(
-                    msg(messages.VOTES_ENTRY, mention=f"<@{key}>", votes=len(value))
-                    for key, value in self.hanging_votes.items()
-                    if value
-                )
-
-                await self.all_chat.send(voted)
-            except Exception:
-                self.log.exception("something went wrong while processing votes:")
+            await self.all_chat.send(voted)
 
     async def _lock(self) -> None:
         """Prevent anyone from sending messages in the game channel."""

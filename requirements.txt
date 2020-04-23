@@ -6,3 +6,4 @@ pylast==2.3.0
 uvloop
 Pillow
 aiosqlite==0.10.0
+fuzzywuzzy[speedup]
