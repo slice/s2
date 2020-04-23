@@ -702,7 +702,7 @@ class MafiaGame:
             if item[1] >= votes_required
         )
 
-        if len(set(vote_tallies.values())) == 1:
+        if len(vote_board) > 1 and len(set(vote_tallies.values())) == 1:
             # all votes were above the required threshold but were the same, tied!
             return None
 
