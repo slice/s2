@@ -23,67 +23,66 @@ MAFIA_GREET_FLAVOR = [
 ]
 
 MAFIA_GREET = (
-    "{mentions}: {flavor} In this channel, you can secretly talk to your evil partner."
+    "@everyone: {flavor} In this channel, you can secretly talk to your evil partner."
 )
 
-INVESTIGATOR_GREET = (
-    "{mention}: Hello there, investigator! Here you will be able to visit "
-    "someone's house every night and determine their suspiciousness. "
-    "This is vital to defeating the mafia!"
-)
-
-MAFIA_KILL_PROMPT = (
-    "{mentions}: It's time to kill!\n\n"
-    "\N{HOCHO} Discuss someone to kill, then **type `!kill <username>` in chat** "
-    "when you have decided on someone to stab. You have 30 seconds!\n\n"
-    "Alternatively, you can do nothing to stay low. "
-    "Once you choose someone to kill, you can't go back to killing nobody!\n\n"
-    "{victims}"
-)
-
-INVESTIGATOR_VISIT_PROMPT = (
-    "{mention}: Pick someone to visit and investigate tonight by "
-    "**typing `!visit <username>` in chat**. You have 30 seconds!\n\n"
-    "{players}"
-)
-
-MAFIA_PICK_VICTIM = [
+MAFIA_PICK = [
     "Okay, **{victim}** will be killed tonight.",
     "Got it. **{victim}** will be murdered tonight.",
     "Picked **{victim}** to be tonight's victim.",
 ]
 
+MAFIA_SUCCESS = [
+    "**{victim}** was killed!",
+    "**{victim}** is now dead.",
+    "**{victim}**, rest in peace.",
+    "**{victim}**, R.I.P.",
+]
+
 INVESTIGATOR_PICK = [
-    "{mention}: Okay, visiting **{player}** tonight.",
-    "{mention}: OK, you'll visit **{player}'s house** tonight.",
-    "{mention}: Okay, paying a visit to **{player}**."
+    "Okay, visiting **{player}** tonight.",
+    "OK, you'll visit **{player}'s house** tonight.",
+    "Okay, paying a visit to **{player}**.",
 ]
 
 INVESTIGATOR_RESULT_SUSPICIOUS = [
-    "{mention}: You find that your target has a knife collection.",
-    "{mention}: You find that the suspect is making a lot of noise.",
-    "{mention}: You find that the suspect's garage is leaking red fluid.",
-    "{mention}: You find that your target has a shed full of weapons.",
+    "You find that your target has a knife collection.",
+    "You find that the suspect is making a lot of noise.",
+    "You find that the suspect's garage is leaking red fluid.",
+    "You find that your target has a shed full of weapons.",
 ]
 
 INVESTIGATOR_RESULT_CLEAN = [
-    "{mention}: You find nothing out of the ordinary with your target.",
-    "{mention}: You find nothing suspicious with your target.",
-    "{mention}: You find nothing strange with the suspect.",
+    "You find nothing out of the ordinary with your target.",
+    "You find nothing suspicious with your target.",
+    "You find nothing strange with the suspect.",
 ]
 
-MAFIA_PICK_VICTIM_AGAIN = [
-    "Changed your mind?",
-    "Found a better option?",
-    "Haven't made up your mind?",
-    "Made a better decision?",
-    "Got a better one?",
-]
+ROLE_GREETINGS = {
+    "Innocent": "**You are innocent!** Your goal is to survive and hang the mafia.",
+    "Investigator": (
+        "Hello there, **investigator!** You will be able to visit "
+        "someone's house every night and determine their suspiciousness. "
+        "This is vital to defeating the mafia and helping your fellow townies survive!"
+    ),
+}
 
-YOU_ARE_INNOCENT = (
-    "**You are innocent!** Your goal is to hang the mafia. "
-    "The game will take place in {all_chat}."
-)
+ACTION_PROMPTS = {
+    "Mafia": (
+        "It's time to kill!\n\n"
+        "\N{HOCHO} Discuss someone to kill, then **type `!kill <username>` in chat** "
+        "when you have decided on someone to stab. You have 30 seconds!\n\n"
+        "Alternatively, you can do nothing to stay low. "
+        "Once you choose someone to kill, you can't go back to killing nobody!\n\n"
+        "{victims}"
+    ),
+    "Investigator": (
+        "Pick someone to visit and investigate tonight by "
+        "**typing `!visit <username>` in chat**. You have 30 seconds!\n\n"
+        "{players}"
+    ),
+}
+
 
 GAME_START = [
     "{mentions}: The main game will take place here. Have fun!",
@@ -100,15 +99,15 @@ TUTORIAL = (
 )
 
 DISCUSSION_TIME_ANNOUNCEMENT = [
-    "It is now discussion time! **{votes} votes** are required for hanging.",
-    "Time to discuss! **{votes} votes** are needed to hang someone.",
-    "Let's discuss! **{votes} votes** are needed for hanging.",
+    "It is now discussion time! Decide on someone to hang.",
+    "Time to discuss! Decide on a town member to hang.",
+    "Let's discuss! Will someone die today?",
 ]
 
-DISCUSSION_TIME_TUTORIAL = (
+VOTING_TIME_ANNOUNCEMENT = (
     "Alive town members can now vote who to hang. "
     "To vote, type `!vote <username>` in chat. "
-    "You all have 30 seconds, and {votes} votes are needed to hang someone.\n\n"
+    "You all have 90 seconds, and {votes} votes are needed to hang someone.\n\n"
     "**Alive Players:**\n\n{players}"
 )
 
@@ -164,4 +163,4 @@ FILLING_PROGRESS = (
     "Players who still need to join:\n\n{waiting_on}"
 )
 
-SOMETHING_BROKE = "@everyone: Looks like something broke (`{error}`)... tell slice!"
+SOMETHING_BROKE = "@everyone: Looks like something broke (`{error!r}`)... tell slice!"

@@ -9,70 +9,33 @@ import enum
 import logging
 import math
 import random
-import typing
-from typing import (DefaultDict, Dict, List, Optional, Sequence, Set, Tuple,
-                    Union)
+from typing import (
+    Any,
+    AsyncGenerator,
+    DefaultDict,
+    Dict,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    Iterator,
+)
 
 import discord
-import fuzzywuzzy.process as fw_process
+from lifesaver.utils import pluralize, codeblock
 
-from lifesaver.utils import pluralize
-
-from . import messages
+from . import messages, role
+from .permissions import ALLOW, BLOCK, HUSH, HUSH_PERMS, NEUTRAL_HUSH_PERMS
+from .player import Player
+from .role import Role, RoleActionContext
 from .roster import Roster
-
-BLOCK = discord.PermissionOverwrite(read_messages=False)
-ALLOW = discord.PermissionOverwrite(read_messages=True)
-HUSH_PERMS: Dict[str, bool] = {"add_reactions": False, "send_messages": False}
-HUSH = discord.PermissionOverwrite(**HUSH_PERMS)
-NEUTRAL_HUSH_PERMS = {key: None for key in HUSH_PERMS}
-
-
-def mention_set(users: typing.AbstractSet[discord.User]) -> str:
-    """Format a list of mentions from a list of users."""
-    return ", ".join(user.mention for user in users)
-
-
-def basic_command(name: str, inp: str) -> Optional[str]:
-    name = name + " "
-
-    if not inp.startswith(name):
-        return None
-    return inp[len(name) :]
-
-
-def select_member(
-    selector: str, members: Set[discord.Member]
-) -> Optional[discord.Member]:
-    direct_match = discord.utils.find(
-        lambda member: str(member).lower() == selector.lower()
-        or member.name.lower() == selector.lower()
-        or str(member.id) == selector,
-        members,
-    )
-
-    if direct_match is not None:
-        return direct_match
-
-    mapping = {member.id: member.name for member in members}
-    _, score, selected_id = fw_process.extractOne(selector, mapping)
-
-    if score > 50:  # arbitrary threshold
-        return discord.utils.find(lambda member: member.id == selected_id, members)
-
-    return None
-
-
-def user_listing(users: Union[Sequence[discord.User], Set[discord.User]]) -> str:
-    """Format a list of users."""
-    return "\n".join(f"\N{EM DASH} {user}" for user in users)
-
-
-def msg(message: Union[str, List[str]], *args, **kwargs) -> str:
-    """Process a message, randomly choosing from it if it's a ``list``."""
-    if isinstance(message, list):
-        message = random.choice(message)
-    return message.format(*args, **kwargs)
+from .utils import (
+    select_player,
+    resolve_state_key,
+    basic_command,
+)
+from .formatting import mention_set, user_listing, msg
 
 
 class MafiaGameState(enum.Enum):
@@ -101,9 +64,12 @@ class MafiaGame:
         self.bot = bot
         self.log = logging.getLogger(f"{__name__}[{lobby_channel.id}]")
 
-        #: The game roster, a class that stores full lists of players and handles
-        #: mafia selection.
-        self.roster = Roster(self, creator=creator)
+        #: The set of all game participants as Discord members of the original
+        #: server.
+        self.participants: Set[discord.Member] = {creator}
+
+        #: The game roster. Stores the full list of active players.
+        self.roster: Optional[Roster] = None
 
         #: The user who created the game.
         self.creator = creator
@@ -111,20 +77,23 @@ class MafiaGame:
         #: The channel that the lobby was created in.
         self.lobby_channel = lobby_channel
 
+        #: The invitation message in the lobby.
+        self.invite_message: Optional[discord.Message] = None
+
         #: The main text channel where both mafia and townies can speak during the day.
         self.all_chat: Optional[discord.TextChannel] = None
 
-        #: The text channel reserved for mafia members.
-        self.mafia_chat: Optional[discord.TextChannel] = None
+        #: The dictionary of grouped role chats for each role in the game.
+        self.role_chats: Dict[Type[Role], discord.TextChannel] = {}
 
-        #: The text channel reserved for spectators and dead players.
-        self.spectator_chat: Optional[discord.TextChannel] = None
+        #: The dictionary of personal chats for each player in the game.
+        self.personal_chats: Dict[Player, discord.TextChannel] = {}
 
-        #: The text channel reserved for the investigator.
-        self.gator_house: Optional[discord.TextChannel] = None
+        #: The dictionary of role states. Updated when performing actions.
+        self.role_state: Dict[str, Any] = {}
 
-        #: The investigator's target for tonight.
-        self.gator_visiting: Optional[discord.Member] = None
+        #: The lock for role states.
+        self._role_state_lock = asyncio.Lock()
 
         #: The guild where the game is taking place.
         self.guild: Optional[discord.Guild] = None
@@ -149,9 +118,6 @@ class MafiaGame:
         #: list of users who voted for that person to be hanged.
         self.hanging_votes: DefaultDict[int, list] = collections.defaultdict(list)
 
-        #: The victim that will be killed tonight, as decided by mafia.
-        self.victim_tonight: Optional[discord.Member] = None
-
         #: Whether the game was thrown.
         self.thrown = False
 
@@ -163,6 +129,9 @@ class MafiaGame:
 
         #: The message that shows who still needs to join.
         self._filling_message: Optional[discord.Message] = None
+
+        #: Whether we are handling nocturnal actions or not.
+        self._handling_noctural_actions: bool = False
 
     #: Debugging mode. Shortens some wait times.
     DEBUG = False
@@ -178,6 +147,7 @@ class MafiaGame:
         return {
             "on_member_join": self._member_join,
             "on_member_remove": self._member_remove,
+            "on_message": self._on_message,
         }
 
     def _attach_listeners(self) -> None:
@@ -194,12 +164,29 @@ class MafiaGame:
 
         self.log.info("joined: %s (%d)", member, member.id)
 
-        if member not in self.roster.all:
+        if member not in self.participants:
             # someone not in the roster joined, give spectator role
+            assert self.spectator_role is not None
             await member.add_roles(self.spectator_role)
             return
 
-        if set(self.guild.members) >= self.roster.all:
+        assert self.roster is not None
+
+        # edit the user's personal channel to allow them, since we can't do it at
+        # creation
+        player = self.roster.get_player(member.id)
+        assert player is not None
+        assert player.channel is not None
+        existing_overwrites = player.channel.overwrites
+        await player.channel.edit(overwrites={**existing_overwrites, member: ALLOW})
+
+        # if the player is in a grouped role, give them access to the role channel now
+        if player.role.grouped:
+            role_channel = self.role_chats[player.role]
+            existing_overwrites = role_channel.overwrites
+            await role_channel.edit(overwrites={**existing_overwrites, member: ALLOW})
+
+        if set(self.guild.members) >= self.participants:
             # everyone has joined!
             self._players_joined_event.set()
         else:
@@ -210,8 +197,8 @@ class MafiaGame:
         if member.guild != self.guild:
             return
 
-        # make sure they are a player before throwing
-        if member not in self.roster.all:
+        assert self.roster is not None
+        if member not in self.roster.players:
             return
 
         if self.thrown:
@@ -220,12 +207,32 @@ class MafiaGame:
         self.thrown = True
         await self._throw(member)
 
+    async def _on_message(self, message: discord.Message) -> None:
+        if message.guild != self.guild:
+            return
+
+        await self._handle_always_available_commands(message)
+
+        if self._handling_noctural_actions:
+            await self._handle_night_command(message)
+
+    async def _all_messages(self) -> AsyncGenerator[discord.Message, None]:
+        """Asynchronously iterate over all new messages in the guild."""
+
+        def check(message: discord.Message) -> bool:
+            return message.guild == self.guild
+
+        while True:
+            yield await self.bot.wait_for("message", check=check)
+
     async def _messages_in(
         self,
         channel: discord.TextChannel,
         *,
         by: Union[Set[discord.Member], discord.Member],
-    ) -> typing.AsyncGenerator[discord.Message, None]:
+    ) -> AsyncGenerator[discord.Message, None]:
+        """Asynchronously iterate over specific messages in the guild."""
+
         def check(message: discord.Message) -> bool:
             channel_cond = message.channel == channel
             if isinstance(by, set):
@@ -234,8 +241,7 @@ class MafiaGame:
                 return channel_cond and message.author == by
 
         while True:
-            message = await self.bot.wait_for("message", check=check)
-            yield message
+            yield await self.bot.wait_for("message", check=check)
 
     async def _throw(self, thrower) -> None:
         assert self.all_chat is not None
@@ -259,13 +265,13 @@ class MafiaGame:
         bare_minimum = 3
         lobby = self.lobby_channel
 
-        def embed() -> str:
-            required = 3 - len(self.roster.all)
+        def embed() -> discord.Embed:
+            required = 3 - len(self.participants)
             required_text = pluralize(player=required, with_indicative=True)
 
             embed = discord.Embed(
                 title="Mafia Lobby",
-                description=user_listing(self.roster.all),
+                description=user_listing(self.participants),
                 color=discord.Color.gold(),
             )
             embed.set_author(name=str(self.creator), icon_url=self.creator.avatar_url)
@@ -307,17 +313,17 @@ class MafiaGame:
 
             if reaction.emoji == join_emoji:
                 self.log.info("%r is joining the game", user)
-                self.roster.add(user)
-                await prompt.edit(embed=embed())
+                self.participants.add(user)
+                self.bot.loop.create_task(prompt.edit(embed=embed()))
 
-                if len(self.roster.all) >= bare_minimum:
+                if len(self.participants) >= bare_minimum:
                     # 3 is the bare minimum
                     await prompt.add_reaction(start_emoji)
 
             if starting:
                 # time to start!
 
-                if len(self.roster.all) < bare_minimum:
+                if len(self.participants) < bare_minimum:
                     await lobby.send(
                         msg(
                             messages.LOBBY_CANT_FORCE_START,
@@ -365,6 +371,7 @@ class MafiaGame:
         await guild.default_role.edit(permissions=base_permissions)
 
         # refresh cache
+        await asyncio.sleep(1)
         guild = self.guild = self.bot.get_guild(guild.id)
 
         # rename the default category just for fun
@@ -377,254 +384,201 @@ class MafiaGame:
         await guild.voice_channels[0].delete()
 
         # use the default text channel as the game chat
-        self.all_chat = guild.text_channels[0]
-        await self.all_chat.edit(name="game-chat")
+        all_chat = self.all_chat = guild.text_channels[0]
+        await all_chat.edit(name="game-chat")
 
-        self.spectator_role = await guild.create_role(
+        spectator_role = self.spectator_role = await guild.create_role(
             name="spectator", color=discord.Color.dark_grey()
         )
-        self.dead_role = await guild.create_role(
+        dead_role = self.dead_role = await guild.create_role(
             name="dead", color=discord.Color.dark_red()
         )
 
-        await self.all_chat.edit(
-            overwrites={self.dead_role: HUSH, self.spectator_role: HUSH}
-        )
+        # apply overwrites
+        await all_chat.edit(overwrites={dead_role: HUSH, spectator_role: HUSH})
 
         self.spectator_chat = await first_category.create_text_channel(
             name="spec-chat",
             overwrites={
                 guild.default_role: BLOCK,
-                self.spectator_role: ALLOW,
-                self.dead_role: ALLOW,
+                spectator_role: ALLOW,
+                dead_role: ALLOW,
             },
         )
 
-    async def _setup_mafia(self) -> None:
-        """Set up the mafia members for this game and creates the chat channel."""
-        # `self._setup_game_area` should've been called
-        assert self.guild is not None
+    async def _handle_always_available_commands(self, message: discord.Message) -> None:
+        """Handle commands that are always available."""
+        assert self.roster is not None
+        player = self.roster.get_player(message.author)
 
-        mafia = self.roster.pick_mafia()
-        self.log.debug("picked mafia: %r", mafia)
-
-        self.mafia_chat = await self.category.create_text_channel(
-            name="mafia-chat",
-            overwrites={
-                self.guild.default_role: BLOCK,
-                self.dead_role: HUSH,
-                **{mafia_member: ALLOW for mafia_member in self.roster.mafia},
-            },
-        )
-
-        await self.mafia_chat.send(
-            msg(
-                messages.MAFIA_GREET,
-                mentions=mention_set(self.roster.mafia),
-                flavor=msg(messages.MAFIA_GREET_FLAVOR),
-            )
-        )
-
-    async def _setup_investigator(self) -> None:
-        """Set up the investigator's channel."""
-        assert self.guild is not None
-
-        gator = self.roster.pick_investigator()
-        self.log.debug("picked gator: %r", gator)
-
-        self.gator_house = await self.category.create_text_channel(
-            name="gator-house",
-            overwrites={
-                self.guild.default_role: BLOCK,
-                self.dead_role: HUSH,
-                gator: ALLOW,
-            },
-        )
-
-        await self.gator_house.send(
-            msg(messages.INVESTIGATOR_GREET, mention=gator.mention)
-        )
-
-    async def _gator_nighttime(self) -> None:
-        assert self.gator_house is not None
-        assert self.roster.investigator is not None
-
-        gator = self.roster.investigator
-
-        if self.roster.is_dead(gator):
-            # gator dead, no gator nighttime task 4 them!
+        if player is None:
             return
 
-        others = self.roster.alive - {gator}
-
-        await self.gator_house.send(
-            msg(
-                messages.INVESTIGATOR_VISIT_PROMPT,
-                mention=gator.mention,
-                players=user_listing(others),
-            )
-        )
-
-        async for message in self._messages_in(self.gator_house, by=gator):
-            target_name = basic_command("!visit", message.content)
-
-            if not target_name:
-                continue
-
-            target = select_member(target_name, others)
-
-            if not target:
-                await self.gator_house.send(
-                    f"{self.bot.tick(False)} {message.author.mention}: Unknown townie."
+        will_text = basic_command("!will", message.content)
+        if will_text:
+            assert player.channel is not None
+            if len(will_text) > 1000:
+                await player.channel.send(
+                    f"{player.mention}: That's too long. 1,000 characters max."
                 )
-                continue
-
-            self.gator_visiting = target
-
-            picked_message = msg(
-                messages.INVESTIGATOR_PICK, mention=gator.mention, player=target,
-            )
-            await self.gator_house.send(picked_message)
-
-    async def _mafia_nighttime(self) -> None:
-        """Wait for the mafia to choose their victim."""
-        assert self.mafia_chat is not None
-
-        await self.mafia_chat.send(
-            msg(
-                messages.MAFIA_KILL_PROMPT,
-                mentions=mention_set(self.roster.mafia),
-                victims=user_listing(self.roster.alive_townies),
-            )
-        )
-
-        async for message in self._messages_in(self.mafia_chat, by=self.roster.mafia):
-            target_name = basic_command("!kill", message.content)
-
-            if not target_name:
-                continue
-
-            target = select_member(target_name, self.roster.alive_townies)
-
-            if not target:
-                await self.mafia_chat.send(
-                    f"{self.bot.tick(False)} {message.author.mention}: Unknown victim."
-                )
-                continue
-
-            self.victim_tonight = target
-
-            picked_message = msg(messages.MAFIA_PICK_VICTIM, victim=target)
-            picked_message = f"{mention_set(self.roster.alive_mafia)}: {picked_message}"
-
-            if self.victim_tonight is not None:
-                # mafia is changing their mind
-                changed_your_mind = msg(messages.MAFIA_PICK_VICTIM_AGAIN)
-                await self.mafia_chat.send(f"{changed_your_mind} {picked_message}")
             else:
-                await self.mafia_chat.send(picked_message)
+                await player.channel.send(f"{player.mention}: OK, saved your will.")
+                player.will = will_text
+            return
+
+    async def _handle_night_command(self, message: discord.Message) -> None:
+        """Handle commands from personal and grouped role channels at night."""
+        assert self.roster is not None
+
+        player = self.roster.get_player(message.author)
+
+        if player is None:
+            return
+
+        if player.role.grouped and message.channel != self.role_chats[player.role]:
+            # for a player in a grouped role, only allow processing when
+            # speaking in the designated channel
+            return
+
+        # grab previous state
+        prev_state = None
+        if (state_key := resolve_state_key(player)) is not None:
+            prev_state = self.role_state.get(state_key)
+
+        ctx = RoleActionContext(game=self, player=player, message=message)
+        new_state = await player.role.on_message(ctx, prev_state)  # type: ignore
+
+        # update role state from on_message if the state has changed
+        if state_key is not None and new_state != prev_state:
+            self.log.info("updating %r to %r", state_key, new_state)
+            async with self._role_state_lock:
+                self.role_state[state_key] = new_state
 
     async def _nighttime(self) -> None:
+        assert self.roster is not None
         assert self.all_chat is not None
-        assert self.mafia_chat is not None
-        assert self.gator_house is not None
-        assert self.roster.investigator is not None
 
         await self.all_chat.send(msg(messages.NIGHT_ANNOUNCEMENT))
         await self._lock()
 
-        nighttime_tasks = [
-            self.bot.loop.create_task(self._mafia_nighttime()),
-            self.bot.loop.create_task(self._gator_nighttime()),
-        ]
+        # dump the previous role state
+        self.role_state = {}
 
+        def iter_nocturnal() -> Iterator[Player]:
+            assert self.roster is not None
+            handled_grouped_roles: Set[Type[Role]] = set()
+            for player in self.roster.nocturnal:
+                if player.role in handled_grouped_roles:
+                    self.log.info(
+                        "%s: already seen someone with grouped role %r, skipping",
+                        player,
+                        player.role,
+                    )
+                    continue
+                self.log.info("%s: yielding", player)
+                yield player
+                if player.role.grouped:
+                    self.log.info(
+                        "%s: has a grouped role, not yielding anymore", player
+                    )
+                    handled_grouped_roles.add(player.role)
+
+        for player in iter_nocturnal():
+            if player.dead:
+                # they're dead, so don't even bother handling this
+                self.log.info("%s: skipping begin event, they dead", player)
+                continue
+            ctx = RoleActionContext(game=self, player=player)
+            await player.role.on_night_begin(ctx)  # type: ignore
+
+        # handle actions from nocturnal players, such as the mafia choosing who
+        # to kill. at the end of the night, the state from these actions will
+        # be "carried out".
+        self._handling_noctural_actions = True
+
+        self.log.info("handling nocturnal actions")
         await asyncio.sleep(2 if self.DEBUG else 36)
 
-        for task in nighttime_tasks:
-            task.cancel()
+        self._handling_noctural_actions = False
 
         # now to carry out what decisions were made during the night...
+        for player in iter_nocturnal():
+            self.log.info("%s: handling end event", player)
+            state_key = resolve_state_key(player)
 
-        if self.gator_visiting is not None:
-            suspicious = self.gator_visiting in self.roster.mafia
-            if random.randint(0, 9) == 0:
-                # fail randomly
-                suspicious = not suspicious
-            message = (
-                messages.INVESTIGATOR_RESULT_SUSPICIOUS
-                if suspicious
-                else messages.INVESTIGATOR_RESULT_CLEAN
-            )
-            await self.gator_house.send(
-                msg(message, mention=self.roster.investigator.mention)
-            )
-            self.gator_visiting = None
-        if self.victim_tonight is not None:
-            await self._kill(self.victim_tonight)
-            # the value is cleared tomorrow morning
+            if state_key is None:
+                continue
+
+            state = self.role_state.get(state_key)
+            ctx = RoleActionContext(game=self, player=player)
+            await player.role.on_night_end(ctx, state)  # type: ignore
 
         await asyncio.sleep(3)
-        await self._unlock()
+
+        # unlock during day instead, after the death has been announced
+        # await self._unlock()
 
     async def alltalk(self):
         """Allow all game participants to speak in the main game channel."""
-        for member in self.roster.all:
-            self.log.debug("alltalk: allowing %r to speak in %r", member, self.all_chat)
-            await self.all_chat.set_permissions(self.dead_role, **NEUTRAL_HUSH_PERMS)
-            await self.all_chat.set_permissions(
-                self.spectator_role, **NEUTRAL_HUSH_PERMS
-            )
+        await self.all_chat.set_permissions(self.dead_role, **NEUTRAL_HUSH_PERMS)
+        await self.all_chat.set_permissions(self.spectator_role, **NEUTRAL_HUSH_PERMS)
 
     async def _notify_roles(self) -> None:
-        """Notify the townies of their role in the game."""
+        """Notify everyone of their role in the game."""
         assert self.all_chat is not None
+        assert self.roster is not None
 
-        for player in self.roster.townies:
-            if player != self.roster.investigator:
-                continue
-            await player.send(
-                msg(messages.YOU_ARE_INNOCENT, all_chat=self.all_chat.mention)
-            )
+        for player in self.roster.players:
+            assert player.channel is not None
+            if (greeting := messages.ROLE_GREETINGS.get(player.role.name)) is not None:
+                await player.channel.send(msg(greeting))
+
+        # send greet in mafia channel
+        mafia_chat = self.role_chats[role.Mafia]
+        await mafia_chat.send(
+            msg(messages.MAFIA_GREET, flavor=msg(messages.MAFIA_GREET_FLAVOR))
+        )
+
+    def _get_vote(self, voter: Player) -> Optional[int]:
+        for target_id, voter_ids in self.hanging_votes.items():
+            if voter.id in voter_ids:
+                return target_id
+        return None
+
+    def _has_voted(self, voter: Player) -> bool:
+        return self._get_vote(voter) is not None
 
     async def _gather_hanging_votes(self) -> None:
         assert self.all_chat is not None
+        assert self.roster is not None
 
         def check(message: discord.Message) -> bool:
-            return message.channel == self.all_chat and self.roster.is_alive(
-                message.author
+            assert self.roster is not None
+            return (
+                message.channel == self.all_chat
+                and (player := self.roster.get_player(message.author)) is not None
+                and player.alive
             )
-
-        # TODO: these are bad
-        def has_voted(voter):
-            for target_id, voter_ids in self.hanging_votes.items():
-                if voter.id in voter_ids:
-                    return True
-            return False
-
-        def get_vote(voter):
-            for target_id, voter_ids in self.hanging_votes.items():
-                if voter.id in voter_ids:
-                    return target_id
 
         while True:
             message = await self.bot.wait_for("message", check=check)
+            author = self.roster.get_player(message.author)
+            assert author is not None
             selector = basic_command("!vote", message.content)
 
             if not selector:
                 continue
 
-            target = select_member(selector, self.roster.alive)
+            target = select_player(selector, self.roster.alive)
 
-            if not target or target == message.author:
+            if not target or target == author:
                 await message.add_reaction(self.bot.emoji("generic.no"))
                 continue
 
             self.log.debug("%s is voting to hang %s", message.author, target)
 
-            if has_voted(message.author):
-                previous_target = get_vote(message.author)
-
-                if previous_target == target.id:
+            if (previous_vote := self._get_vote(author)) is not None:
+                if previous_vote == target.id:
                     # voter has already voted for this person
                     await self.all_chat.send(
                         msg(
@@ -636,7 +590,7 @@ class MafiaGame:
                     continue
 
                 # remove the vote for the other person (switching votes!)
-                self.hanging_votes[previous_target].remove(message.author.id)
+                self.hanging_votes[previous_vote].remove(message.author.id)
 
             self.hanging_votes[target.id].append(message.author.id)
 
@@ -654,7 +608,7 @@ class MafiaGame:
         """Prevent anyone from sending messages in the game channel."""
         assert self.all_chat is not None
         assert self.guild is not None
-        await self.all_chat.set_permissions(self.guild.default_role, **HUSH_PERMS)
+        await self.all_chat.set_permissions(self.guild.default_role, **HUSH_PERMS)  # type: ignore
 
     async def _unlock(self) -> None:
         """Undo a lock."""
@@ -667,6 +621,7 @@ class MafiaGame:
     async def _game_over(self, *, mafia_won: bool) -> None:
         """Send the list of alive players and activate alltalk."""
         assert self.all_chat is not None
+        assert self.roster is not None
 
         header_msg: str
         listing_msg: str
@@ -678,14 +633,17 @@ class MafiaGame:
             header_msg = messages.TOWNIES_WIN
             listing_msg = messages.CURRENTLY_ALIVE_TOWNIES
 
+        alive = self.roster.alive_mafia if mafia_won else self.roster.alive_townies
+        alive_members = {player.member for player in alive}
         await self.all_chat.send(
             msg(header_msg)
             + "\n\n"
-            + msg(listing_msg, users=user_listing(self.roster.alive_mafia))
+            + msg(listing_msg, users=user_listing(alive_members))
         )
         await self.all_chat.send(msg(messages.THANK_YOU))
 
         await asyncio.sleep(2.0)
+        await self._unlock()
         await self.alltalk()
         await asyncio.sleep(10.0)
 
@@ -711,92 +669,84 @@ class MafiaGame:
         else:
             return None
 
-    async def _hang_with_last_words(self, target: discord.User) -> None:
+    async def _hang_with_last_words(self, player: Player) -> None:
         """Let someone have their last words without anyone else talking."""
         assert self.all_chat is not None
 
         await self._lock()
-        await self.all_chat.set_permissions(target, send_messages=True)
+        await self.all_chat.set_permissions(player.member, send_messages=True)
         await self.all_chat.send(
-            f"\N{SKULL} {target.mention}, you have been voted to be hanged. "
+            f"\N{SKULL} {player.mention}, you have been voted to be hanged. "
             "Do you have any last words? You have 15 seconds."
         )
         await asyncio.sleep(3.0 if self.DEBUG else 15.0)
-        await self.all_chat.set_permissions(target, overwrite=None)
-        await self._kill(target)
+        await self.all_chat.set_permissions(player.member, overwrite=None)
+        await player.kill()
+        await self._display_will(player)
         await self._unlock()
         await self.all_chat.send(
-            f"\N{SKULL} **Rest in peace, {target}. You will be missed.** \N{SKULL}"
+            f"\N{SKULL} **Rest in peace, {player}. You will be missed.** \N{SKULL}"
         )
 
-    def _get_role_str(self, target: discord.Member) -> str:
-        if target == self.roster.investigator:
-            return "investigator"
-        elif target in self.roster.mafia:
-            return "mafia"
-        else:
-            return "innocent"
+    async def _display_will(
+        self, player: Player, channel: discord.TextChannel = None
+    ) -> None:
+        if player.will is None:
+            return
 
-    async def _kill(self, target: discord.Member) -> None:
-        assert self.mafia_chat is not None
         assert self.all_chat is not None
-
-        self.log.info("killing %s (%d)", target, target.id)
-
-        # add to dead id set in roster
-        self.roster.kill(target)
-
-        # prevent speaking/reacting in mafia channel, if they are mafia
-        if target in self.roster.mafia:
-            await self.mafia_chat.set_permissions(
-                target, read_messages=True, **HUSH_PERMS
-            )
-
-        # prevent speaking/reacting by using dead role
-        await target.add_roles(self.dead_role)
-
-        try:
-            await target.edit(nick=f"{target.name} (dead)")
-        except discord.HTTPException:
-            pass
+        channel = channel or self.all_chat
+        await channel.send(f"{player}'s will:\n\n" + codeblock(player.will))
+        await asyncio.sleep(5)
 
     async def _daytime(self) -> None:
         assert self.all_chat is not None
+        assert self.roster is not None
 
-        if self.victim_tonight:
-            # they already died the night before; reset!
-            role = self._get_role_str(self.victim_tonight)
-            await self.all_chat.send(
-                msg(messages.FOUND_DEAD, victim=self.victim_tonight)
-            )
-            self.victim_tonight = None
+        if (victim := self.role_state.get("mafia_victim")) is not None:
+            await self.all_chat.send(msg(messages.FOUND_DEAD, victim=victim))
             await asyncio.sleep(3.0)
-            await self.all_chat.send(msg(messages.THEY_ROLE, role=role))
+            await self._display_will(victim)
+            await self.all_chat.send(msg(messages.THEY_ROLE, role=victim.role.name))
             await asyncio.sleep(5.0)
 
-            # if all townies are dead now, end the game
-            if self.roster.all_townies_dead():
-                await self._game_over(mafia_won=True)
-                raise EndGame()
+        if self.roster.all_mafia_dead():
+            await self._game_over(mafia_won=False)
+            raise EndGame()
+        elif self.roster.all_townies_dead():
+            await self._game_over(mafia_won=True)
+            raise EndGame()
 
-        # time to discuss!
+        await self._unlock()
+
+        # time to discuss + vote
         votes_required = math.floor(len(self.roster.alive) / 3)
-        self.log.info(msg(messages.DISCUSSION_TIME_ANNOUNCEMENT, votes=votes_required))
+
+        # lengths
+        discussion_time = 45
+        voting_time = 30
+
+        await self.all_chat.send(msg(messages.DISCUSSION_TIME_ANNOUNCEMENT))
+        await asyncio.sleep(discussion_time)
+
         await self.all_chat.send(
             msg(
-                messages.DISCUSSION_TIME_TUTORIAL,
+                messages.VOTING_TIME_ANNOUNCEMENT,
                 votes=votes_required,
                 players=user_listing(self.roster.alive),
             )
         )
 
-        # gather hanging votes.
+        # begin gathering votes to hang someone
         task = self.bot.loop.create_task(self._gather_hanging_votes())
-        await asyncio.sleep(50.0)
+
+        # wait a bit
+        await asyncio.sleep(voting_time - 10)
         await self.all_chat.send(msg(messages.VOTING_TIME_REMAINING, seconds=10))
-        await asyncio.sleep(5.0)
+        await asyncio.sleep(5)
         await self.all_chat.send(msg(messages.VOTING_TIME_REMAINING, seconds=5))
-        await asyncio.sleep(5.0)
+        await asyncio.sleep(5)
+
         task.cancel()
 
         voted = self._tally_up_votes(votes_required)
@@ -817,7 +767,7 @@ class MafiaGame:
 
             # reveal role
             await self.all_chat.send(
-                msg(messages.WAS_ROLE, died=hanged, role=self._get_role_str(hanged))
+                msg(messages.WAS_ROLE, died=hanged, role=hanged.role.name)
             )
 
             await asyncio.sleep(5)
@@ -827,11 +777,11 @@ class MafiaGame:
 
     async def _game_loop(self) -> None:
         assert self.all_chat is not None
-        assert self.mafia_chat is not None
+        assert self.roster is not None
 
         # hello, everybody!
         await self.all_chat.send(
-            msg(messages.GAME_START, mentions=mention_set(self.roster.all))
+            msg(messages.GAME_START, mentions=mention_set(self.roster.players))
         )
         await asyncio.sleep(5.0)
 
@@ -867,13 +817,6 @@ class MafiaGame:
             except EndGame:
                 break
 
-            if self.roster.all_mafia_dead():
-                await self._game_over(mafia_won=False)
-                break
-            elif self.roster.all_townies_dead():
-                await self._game_over(mafia_won=True)
-                break
-
             if not self.daytime:
                 # it's night, so move onto next
                 self.day += 1
@@ -888,14 +831,69 @@ class MafiaGame:
     async def _update_filling_message(self) -> None:
         assert self.guild is not None
         assert self.all_chat is not None
+        assert self.roster is not None
 
-        not_joined = self.roster.all - set(self.guild.members)
+        not_joined = self.roster.players - set(self.guild.members)
         text = msg(messages.FILLING_PROGRESS, waiting_on=user_listing(not_joined))
 
         if self._filling_message is None:
             self._filling_message = await self.all_chat.send(text)
         else:
             await self._filling_message.edit(content=text)
+
+    async def _setup_players_and_roster(self) -> None:
+        assert self.guild is not None
+        assert self.dead_role is not None
+        from . import role as roles
+
+        # create a player object for each participant, defaulting to inno
+        player_set = {
+            Player(participant, role=roles.Innocent, game=self)
+            for participant in self.participants
+        }
+
+        # create the main roster
+        self.roster = roster = Roster(self, player_set)
+        self.log.info("initial roster: %r", roster)
+
+        # assign the mafia
+        mafia = roster.sample(roles.Mafia.n_players(roster))
+        for maf in mafia:
+            maf.role = roles.Mafia
+
+        # assign the rest of the roles
+        # town_roles = [roles.Investigator, roles.Medium, roles.Doctor, roles.Escort]
+        town_roles = [roles.Investigator]
+        n_non_passive = math.ceil(len(roster.townies) / 3)
+        for non_passive in set(random.sample(roster.townies, n_non_passive)):
+            non_passive.role = random.choice(town_roles)
+
+        self.log.info("assigned roles: %r", roster)
+
+        # create personal channels for everyone
+        for player in player_set:
+            overwrites: Dict[
+                Union[discord.Role, discord.Member], discord.PermissionOverwrite
+            ] = {
+                self.guild.default_role: BLOCK,
+                self.dead_role: HUSH,
+                # can't overwrite until they join...
+            }
+            channel = await self.category.create_text_channel(
+                name=f"player-{player.id}", overwrites=overwrites,
+            )
+            player.channel = channel
+
+        # create grouped channels for the roles that need it
+        grouped_roles = {player.role for player in player_set if player.role.grouped}
+        for grouped_role in grouped_roles:
+            channel_name = f"{grouped_role.name.lower()}-chat"
+            self.role_chats[grouped_role] = await self.category.create_text_channel(
+                name=channel_name,
+                overwrites={self.guild.default_role: BLOCK, self.dead_role: HUSH},
+            )
+
+        self.log.info("role_chats: %r", self.role_chats)
 
     async def start(self) -> None:
         """Gather participants and start the game."""
@@ -920,11 +918,14 @@ class MafiaGame:
         assert self.guild is not None
         assert self.all_chat is not None
 
+        await self._setup_players_and_roster()
+        assert self.roster is not None
+
         invite = await self.all_chat.create_invite()
-        await self.lobby_channel.send(
+        self.invite_message = await self.lobby_channel.send(
             content=msg(
                 messages.LOBBY_INVITE,
-                mentions=mention_set(self.roster.all),
+                mentions=mention_set(self.participants),
                 invite=invite,
             )
         )
@@ -933,17 +934,15 @@ class MafiaGame:
         self.state = MafiaGameState.FILLING
         self._attach_listeners()
         await self._send_invite_to_lobby()
-        await self._lock()  # lock util everyone has joined
+        await self._lock()  # lock until everyone has joined
         await self._update_filling_message()
         await self._players_joined_event.wait()
         assert self._filling_message is not None
         await self._filling_message.delete()
         await self.roster.localize()
-        assert all(player.guild == self.guild for player in self.roster.all)
+        assert all(player.member.guild == self.guild for player in self.roster.players)
         await self._unlock()
 
-        await self._setup_mafia()
-        await self._setup_investigator()
         await self._notify_roles()
         await asyncio.sleep(5.0)
 
@@ -970,3 +969,9 @@ class MafiaGame:
         # bye bye
         self._detach_listeners()
         await self.guild.delete()
+
+        try:
+            assert self.invite_message is not None
+            await self.invite_message.edit(content="game over!")
+        except discord.HTTPException:
+            pass
