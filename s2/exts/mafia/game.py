@@ -160,17 +160,8 @@ class MafiaGame:
             "on_message": self._on_message,
         }
 
-    def _attach_listeners(self) -> None:
-        for name, func in self._listeners.items():
-            self.bot.add_listener(func, name)
-
-    def _detach_listeners(self) -> None:
-        for name, func in self._listeners.items():
-            self.bot.remove_listener(func, name)
-
-    async def _member_join(self, member: discord.Member) -> None:
-        if member.guild != self.guild:
-            return
+    async def on_member_join(self, member: discord.Member) -> None:
+        assert self.guild is not None
 
         self.log.info("joined: %s (%d)", member, member.id)
 
@@ -203,10 +194,7 @@ class MafiaGame:
             # more still need to join...
             await self._update_filling_message()
 
-    async def _member_remove(self, member: discord.Member) -> None:
-        if member.guild != self.guild:
-            return
-
+    async def on_member_remove(self, member: discord.Member) -> None:
         assert self.roster is not None
         if member not in self.roster.players:
             return
@@ -217,10 +205,7 @@ class MafiaGame:
         self.thrown = True
         await self._throw(member)
 
-    async def _on_message(self, message: discord.Message) -> None:
-        if message.guild != self.guild:
-            return
-
+    async def on_message(self, message: discord.Message) -> None:
         await self._handle_always_available_commands(message)
 
         if self._handling_noctural_actions:
@@ -878,7 +863,6 @@ class MafiaGame:
 
         # wait for everyone to join the server
         self.state = MafiaGameState.FILLING
-        self._attach_listeners()
         await self._send_invite_to_lobby()
         await self._lock()  # lock until everyone has joined
         await self._update_filling_message()
@@ -913,7 +897,6 @@ class MafiaGame:
         await asyncio.sleep(15.0)
 
         # bye bye
-        self._detach_listeners()
         await self.guild.delete()
 
         try:

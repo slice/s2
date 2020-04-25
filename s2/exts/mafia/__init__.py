@@ -1,4 +1,4 @@
-from typing import cast, Dict, Optional
+from typing import Any, Dict, Optional, Union, cast
 
 import discord
 from discord.ext import commands
@@ -29,6 +29,46 @@ class Mafia(lifesaver.Cog):
             return self.get_game(ctx.guild)
 
         return game
+
+    async def dispatch_to_game(
+        self, event: str, guild: discord.Guild, *args, **kwargs
+    ) -> None:
+        """Dispatch an event for a game."""
+
+        if (game := self.get_game(guild)) is None:
+            return
+
+        event_handler = getattr(game, event)
+
+        try:
+            await event_handler(*args, **kwargs)
+        except Exception:
+            self.log.exception(
+                "something went wrong while passing %s to a mafia game", event
+            )
+
+    def _passthrough_event(event: str):  # type: ignore
+        """Generate an event handler that passes events through to mafia games.
+
+        We determine the target game through the ``guild`` property of the first
+        parameter of the handler. It is assumed that events receive an entity with such
+        property.
+        """
+
+        @lifesaver.Cog.listener(event)
+        async def generated_event(self, entity: Any, *args, **kwargs):
+            if (guild := entity.guild) is None:
+                return
+
+            await self.dispatch_to_game(event, guild, entity, *args, **kwargs)
+
+        generated_event.__name__ = event
+
+        return generated_event
+
+    on_message = _passthrough_event("on_message")
+    on_member_join = _passthrough_event("on_member_join")
+    on_member_remove = _passthrough_event("on_member_remove")
 
     @lifesaver.group(hidden=True, invoke_without_command=True)
     @commands.guild_only()
