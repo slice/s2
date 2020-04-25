@@ -173,13 +173,19 @@ class PickerRole(Role[Optional["Player"]]):
         return messages.PICK_PROMPT[cls.name]
 
     @classmethod
+    def should_allow_picking(cls, ctx: RoleActionContext) -> bool:
+        """Return whether to prompt and let the player pick."""
+        return True
+
+    @classmethod
     def get_targets(cls, ctx: RoleActionContext) -> Set["Player"]:
         """Return the set of targets that can be picked from."""
         return ctx.roster.alive - {ctx.player}
 
     @Role.listener()
     async def on_night_begin(cls, ctx: RoleActionContext) -> None:
-        assert ctx.roster is not None
+        if not cls.should_allow_picking(ctx):
+            return
 
         await ctx.reply(
             msg(cls.get_pick_prompt(ctx), targets=user_listing(cls.get_targets(ctx)))
@@ -189,6 +195,9 @@ class PickerRole(Role[Optional["Player"]]):
     async def on_message(
         cls, ctx: RoleActionContext, state: Optional["Player"]
     ) -> Optional["Player"]:
+        if not cls.should_allow_picking(ctx):
+            return state
+
         targets = cls.get_targets(ctx)
         target = await ctx.select_command(cls.pick_command, targets)
 
