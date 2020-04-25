@@ -146,7 +146,7 @@ DISCUSSION_TIME_ANNOUNCEMENT = [
 VOTING_TIME_ANNOUNCEMENT = (
     "Alive town members can now vote who to hang. "
     "To vote, type `!vote <username>` in chat. "
-    "You all have 90 seconds, and {votes} votes are needed to hang someone.\n\n"
+    "You all have 90 seconds, and {votes} are needed to hang someone.\n\n"
     "**Alive Players:**\n\n{players}"
 )
 

@@ -673,7 +673,7 @@ class MafiaGame:
         await self.all_chat.send(
             msg(
                 messages.VOTING_TIME_ANNOUNCEMENT,
-                votes=votes_required,
+                votes=pluralize(vote=votes_required),
                 players=user_listing(self.roster.alive),
             )
         )
