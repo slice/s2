@@ -46,7 +46,8 @@ def select_player(selector: str, players: Set["Player"]) -> Optional["Player"]:
     direct_match = discord.utils.find(
         lambda player: str(player.member.name).lower() == selector.lower()
         or str(player.member).lower() == selector.lower()
-        or str(player.member.id) == selector,
+        or str(player.member.id) == selector
+        or player.mention == selector,
         players,
     )
 
