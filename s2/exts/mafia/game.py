@@ -640,7 +640,7 @@ class MafiaGame:
         assert self.all_chat is not None
         assert self.roster is not None
 
-        if (victim := self.memory.get("mafia_victim")) is not None:
+        if (victim := self.memory.get("mafia_victim")) is not None and victim.dead:
             await self.all_chat.send(msg(messages.FOUND_DEAD, victim=victim))
             await asyncio.sleep(3.0)
             await self._display_will(victim)
