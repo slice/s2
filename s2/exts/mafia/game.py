@@ -699,6 +699,16 @@ class MafiaGame:
         await channel.send(f"{player}'s will:\n\n" + codeblock(player.will))
         await asyncio.sleep(5)
 
+    async def _check_game_over(self) -> None:
+        assert self.roster is not None
+
+        if self.roster.all_mafia_dead():
+            await self._game_over(mafia_won=False)
+            raise EndGame()
+        elif self.roster.all_townies_dead():
+            await self._game_over(mafia_won=True)
+            raise EndGame()
+
     async def _daytime(self) -> None:
         assert self.all_chat is not None
         assert self.roster is not None
@@ -710,13 +720,10 @@ class MafiaGame:
             await self.all_chat.send(msg(messages.THEY_ROLE, role=victim.role.name))
             await asyncio.sleep(5.0)
 
-        if self.roster.all_mafia_dead():
-            await self._game_over(mafia_won=False)
-            raise EndGame()
-        elif self.roster.all_townies_dead():
-            await self._game_over(mafia_won=True)
-            raise EndGame()
+        # someone has died, check if the game can end now
+        await self._check_game_over()
 
+        # unlock from being locked from the night
         await self._unlock()
 
         # time to discuss + vote
@@ -771,6 +778,8 @@ class MafiaGame:
             )
 
             await asyncio.sleep(5)
+
+            await self._check_game_over()
 
         # reset hanging votes
         self.hanging_votes = collections.defaultdict(list)
