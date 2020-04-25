@@ -14,11 +14,19 @@ class Mafia(lifesaver.Cog):
         super().__init__(*args, **kwargs)
         self.sessions: Dict[int, MafiaGame] = {}
 
-    def get_game(self, ctx: lifesaver.Context) -> Optional[MafiaGame]:
-        """Return an active game for the current context."""
+    def get_game(
+        self, ctx: Union[lifesaver.Context, discord.Guild]
+    ) -> Optional[MafiaGame]:
+        """Return the game according to the current context, or the game's guild."""
 
-        if (game := self.sessions.get(ctx.channel.id)) is not None:
-            game = discord.utils.get(self.sessions.values(), guild=ctx.guild)
+        if isinstance(ctx, discord.Guild):
+            return discord.utils.get(self.sessions.values(), guild=ctx)
+
+        if (game := self.sessions.get(ctx.channel.id)) is None:
+            # since we're unable to fetch the game from the lobby channel, try
+            # the guild that we're in
+            assert ctx.guild is not None
+            return self.get_game(ctx.guild)
 
         return game
 
