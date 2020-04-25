@@ -24,34 +24,17 @@ MAFIA_GREET_FLAVOR = [
 
 MAFIA_GREET = "@everyone: {flavor} Plan out who to kill each night in this channel."
 
-MAFIA_PICK = [
-    "Okay, **{victim}** will be killed tonight.",
-    "Got it. **{victim}** will be murdered tonight.",
-    "Picked **{victim}** to be tonight's victim.",
-]
-
 MAFIA_FAILURE = [
-    "Someone prevented **{victim}**'s death!",
-    "**{victim}** managed to survive your attack!",
-    "**{victim}** was healed!",
+    "Someone prevented **{target}**'s death!",
+    "**{target}** managed to survive your attack!",
+    "**{target}** was healed!",
 ]
 
 MAFIA_SUCCESS = [
-    "**{victim}** was killed!",
-    "**{victim}** is now dead.",
-    "**{victim}**, rest in peace.",
-    "**{victim}**, R.I.P.",
-]
-
-INVESTIGATOR_PICK = [
-    "Okay, visiting **{player}** tonight.",
-    "OK, you'll visit **{player}'s house** tonight.",
-    "Okay, paying a visit to **{player}**.",
-]
-
-DOCTOR_PICK = [
-    "Okay, healing **{player}** tonight.",
-    "OK, going to heal **{player}** tonight.",
+    "**{target}** was killed!",
+    "**{target}** is now dead.",
+    "**{target}**, rest in peace.",
+    "**{target}**, R.I.P.",
 ]
 
 DOCTOR_RESULT = {
@@ -100,24 +83,41 @@ ROLE_GREETINGS = {
     ),
 }
 
-ACTION_PROMPTS = {
+PICK_RESPONSE = {
+    "Mafia": [
+        "Okay, **{target}** will be killed tonight.",
+        "Got it. **{target}** will be murdered tonight.",
+        "Picked **{target}** to be tonight's victim.",
+    ],
+    "Investigator": [
+        "Okay, visiting **{target}** tonight.",
+        "OK, you'll visit **{target}'s house** tonight.",
+        "Okay, paying a visit to **{target}**.",
+    ],
+    "Doctor": [
+        "Okay, healing **{target}** tonight.",
+        "OK, going to heal **{target}** tonight.",
+    ],
+}
+
+PICK_PROMPT = {
     "Mafia": (
         "It's time to kill!\n\n"
         "\N{HOCHO} Discuss someone to kill, then **type `!kill <username>` in chat** "
         "when you have decided on someone to stab. You have 30 seconds!\n\n"
         "Alternatively, you can do nothing to stay low. "
         "Once you choose someone to kill, you can't go back to killing nobody!\n\n"
-        "{victims}"
+        "{targets}"
     ),
     "Investigator": (
         "Pick someone to visit and investigate tonight by "
         "**typing `!visit <username>` in chat**. You have 30 seconds!\n\n"
-        "{players}"
+        "{targets}"
     ),
     "Doctor": (
         "Pick someone to heal tonight by **typing `!heal <username>` in chat**. "
         "If they aren't attacked, then nothing will happen. "
-        "You have 30 seconds!\n\n{players}"
+        "You have 30 seconds!\n\n{targets}"
     ),
 }
 

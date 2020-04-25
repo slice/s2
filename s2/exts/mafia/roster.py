@@ -3,7 +3,7 @@
 __all__ = ["Roster"]
 
 import random
-from typing import Callable, Set, Union, Optional, TYPE_CHECKING
+from typing import Callable, Set, Union, Optional, TYPE_CHECKING, Type
 
 import discord
 
@@ -47,6 +47,10 @@ class Roster:
     ) -> Set["Player"]:
         players = players or self.players
         return set(filter(predicate, players))
+
+    def with_role(self, role: Type[role.Role]) -> Set["Player"]:
+        """Return the set of players with a role."""
+        return self._filter_players(lambda player: player.role is role)
 
     @property
     def alive(self) -> Set["Player"]:

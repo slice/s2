@@ -1,4 +1,4 @@
-__all__ = ["user_listing", "msg"]
+__all__ = ["user_listing", "msg", "Message"]
 
 import random
 from typing import Union, List, Iterable, TYPE_CHECKING
@@ -9,13 +9,15 @@ if TYPE_CHECKING:
     from .player import Player
     from .utils import UserLikeIterable
 
+Message = Union[str, List[str]]
+
 
 def user_listing(users: Union["UserLikeIterable", Iterable["Player"]]) -> str:
     """Format a list of users."""
     return "\n".join(f"\N{EM DASH} {user}" for user in users)
 
 
-def msg(message: Union[str, List[str]], *args, **kwargs) -> str:
+def msg(message: Message, *args, **kwargs) -> str:
     """Process a message, randomly choosing from it if it's a ``list``."""
     if isinstance(message, list):
         message = random.choice(message)

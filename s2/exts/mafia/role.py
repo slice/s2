@@ -13,13 +13,13 @@ __all__ = [
 import abc
 import functools
 import math
-from typing import Generic, Any, TypeVar, Optional, Set, TYPE_CHECKING
+from typing import Generic, TypeVar, Optional, Set, TYPE_CHECKING
 
 import discord
 
 from . import messages
 from .roster import Roster
-from .formatting import user_listing, msg
+from .formatting import user_listing, msg, Message
 from .utils import select_player, basic_command
 
 if TYPE_CHECKING:
@@ -36,12 +36,17 @@ class RoleActionContext:
         self.message: Optional[discord.Message] = kwargs.get("message")
 
     async def send(self, *args, **kwargs) -> discord.Message:
-        """Send a message to the channel."""
-        return await self.channel.send(*args, **kwargs)
+        """Send a message to the role channel."""
+        target = self.group_channel if self.player.role.grouped else self.channel
+        return await target.send(*args, **kwargs)
 
     async def reply(self, content: str) -> discord.Message:
         """Reply to the message."""
-        mention = "@everyone" if self.player is None else self.player.mention
+        more_than_one = (
+            self.player.role.grouped
+            and len(self.roster.with_role(self.player.role)) > 1
+        )
+        mention = "@everyone" if more_than_one else self.player.mention
         return await self.send(f"{mention}: {content}")
 
     @property
@@ -147,6 +152,51 @@ class Role(abc.ABC, Generic[S]):
         return decorator
 
 
+class PickerRole(Role[Optional["Player"]]):
+    """A role that picks someone at night.
+
+    What is done when the night ends is up to the inheriting class.
+    """
+
+    pick_command: str
+
+    @classmethod
+    def get_pick_response(cls, ctx: RoleActionContext) -> Message:
+        """Return the message used when the player has picked."""
+        return messages.PICK_RESPONSE[cls.name]
+
+    @classmethod
+    def get_pick_prompt(cls, ctx: RoleActionContext) -> Message:
+        """Return the message used to prompt the player to pick."""
+        return messages.PICK_PROMPT[cls.name]
+
+    @classmethod
+    def get_targets(cls, ctx: RoleActionContext) -> Set["Player"]:
+        """Return the set of targets that can be picked from."""
+        return ctx.roster.alive - {ctx.player}
+
+    @Role.listener()
+    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
+        assert ctx.roster is not None
+
+        await ctx.reply(
+            msg(cls.get_pick_prompt(ctx), targets=user_listing(cls.get_targets(ctx)))
+        )
+
+    @Role.listener()
+    async def on_message(
+        cls, ctx: RoleActionContext, state: Optional["Player"]
+    ) -> Optional["Player"]:
+        targets = cls.get_targets(ctx)
+        target = await ctx.select_command(cls.pick_command, targets)
+
+        if target is None:
+            return state
+
+        await ctx.reply(msg(cls.get_pick_response(ctx), target=target))
+        return target
+
+
 class Innocent(Role):
     """The ordinary people of the town.
 
@@ -158,7 +208,7 @@ class Innocent(Role):
     guaranteed = True
 
 
-class Mafia(Role):
+class Mafia(PickerRole):
     """The murderers of the town."""
 
     name = "Mafia"
@@ -166,35 +216,17 @@ class Mafia(Role):
     evil = True
     guaranteed = True
 
+    pick_command = "!kill"
+    state_key = "mafia_victim"
+
     @classmethod
     def n_players(cls, roster: Roster) -> int:
         """Calculate how much mafia there should be in a game."""
         return min(math.floor(len(roster.players) / 3), 3)
 
-    state_key = "mafia_victim"
-
-    @Role.listener()
-    async def on_message(
-        cls, ctx: RoleActionContext, state: Optional["Player"]
-    ) -> Optional["Player"]:
-        target = await ctx.select_command("!kill", ctx.roster.alive_townies)
-        if target is None:
-            return state
-        await ctx.group_channel.send(
-            "@everyone: " + msg(messages.MAFIA_PICK, victim=target)
-        )
-        return target
-
-    @Role.listener()
-    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
-        assert ctx.roster is not None
-        await ctx.group_channel.send(
-            "@everyone: "
-            + msg(
-                messages.ACTION_PROMPTS["Mafia"],
-                victims=user_listing(ctx.roster.alive_townies),
-            )
-        )
+    @classmethod
+    def get_targets(cls, ctx: RoleActionContext) -> Set["Player"]:
+        return ctx.roster.alive_townies
 
     @Role.listener()
     async def on_night_end(
@@ -212,47 +244,23 @@ class Mafia(Role):
         )
 
         if was_healed:
-            await ctx.group_channel.send(
-                "@everyone: " + msg(messages.MAFIA_FAILURE, victim=victim)
-            )
+            await ctx.reply(msg(messages.MAFIA_FAILURE, victim=victim))
             return
 
         await victim.kill()
-        await ctx.group_channel.send(
-            "@everyone: " + msg(messages.MAFIA_SUCCESS, victim=victim)
-        )
+        await ctx.reply(msg(messages.MAFIA_SUCCESS, victim=victim))
 
 
-class Doctor(Role):
+class Doctor(PickerRole):
     """Able to prevent someone from dying if they are attacked."""
 
     name = "Doctor"
 
+    pick_command = "!heal"
     state_key = "heal_target"
 
-    @classmethod
-    def _targets(cls, ctx: RoleActionContext) -> Set["Player"]:
-        return ctx.roster.alive - {ctx.player}
-
-    @Role.listener()
-    async def on_message(
-        cls, ctx: RoleActionContext, state: Optional["Player"]
-    ) -> Optional["Player"]:
-        target = await ctx.select_command("!heal", cls._targets(ctx))
-        if target is None:
-            return state
-        await ctx.reply(msg(messages.DOCTOR_PICK, player=target))
-        return target
-
-    @Role.listener()
-    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
-        await ctx.send(
-            msg(
-                messages.ACTION_PROMPTS["Doctor"],
-                players=user_listing(cls._targets(ctx)),
-            )
-        )
-
+    # only notify the player after end events have already taken place, so we
+    # know if they got attacked or not
     @Role.listener(priority=-100)
     async def on_night_end(
         cls, ctx: RoleActionContext, target: Optional["Player"]
@@ -265,43 +273,19 @@ class Doctor(Role):
         await ctx.send(msg(messages.DOCTOR_RESULT[message_key], target=target))
 
 
-class Escort(Role):
+class Escort(PickerRole):
     """Able to block someone from doing something."""
 
     name = "Escort"
 
 
-class Investigator(Role):
+class Investigator(PickerRole):
     """Able to investigate someone for suspiciousness."""
 
     name = "Investigator"
 
+    pick_command = "!visit"
     state_key = "investigator_target"
-
-    @classmethod
-    def _targets(cls, ctx: RoleActionContext) -> Set["Player"]:
-        return ctx.roster.alive - {ctx.player}
-
-    @Role.listener()
-    async def on_message(
-        cls, ctx: RoleActionContext, state: Optional["Player"]
-    ) -> Optional["Player"]:
-        target = await ctx.select_command("!visit", cls._targets(ctx))
-        if target is None:
-            return state
-        await ctx.reply(msg(messages.INVESTIGATOR_PICK, player=target))
-        return target
-
-    @Role.listener()
-    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
-        assert ctx.roster is not None
-
-        await ctx.send(
-            msg(
-                messages.ACTION_PROMPTS["Investigator"],
-                players=user_listing(cls._targets(ctx)),
-            )
-        )
 
     @Role.listener()
     async def on_night_end(
@@ -319,7 +303,7 @@ class Investigator(Role):
         await ctx.reply(msg(message))
 
 
-class Medium(Role):
+class Medium(PickerRole):
     """Able to speak to the dead once a game."""
 
     name = "Medium"
