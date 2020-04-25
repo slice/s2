@@ -26,7 +26,8 @@ import discord
 import lifesaver
 from lifesaver.utils import pluralize, codeblock
 
-from . import messages, role
+from . import messages
+from . import role
 from .permissions import ALLOW, BLOCK, HUSH, HUSH_PERMS, NEUTRAL_HUSH_PERMS
 from .player import Player
 from .role import Role, RoleActionContext
@@ -59,6 +60,12 @@ class EndGame(RuntimeError):
 
 class MafiaGame:
     """A class representing a game of mafia."""
+
+    WEIGHTED_ROLES = {
+        role.Innocent: 20,
+        role.Investigator: 10,
+        role.Doctor: 10,
+    }
 
     def __init__(
         self,
@@ -777,11 +784,10 @@ class MafiaGame:
     async def _setup_players_and_roster(self) -> None:
         assert self.guild is not None
         assert self.dead_role is not None
-        from . import role as roles
 
         # create a player object for each participant, defaulting to inno
         player_set = {
-            Player(participant, role=roles.Innocent, game=self)
+            Player(participant, role=role.Innocent, game=self)
             for participant in self.participants
         }
 
@@ -790,16 +796,17 @@ class MafiaGame:
         self.log.info("initial roster: %r", roster)
 
         # assign the mafia
-        mafia = roster.sample(roles.Mafia.n_players(roster))
+        mafia = roster.sample(role.Mafia.n_players(roster))
         for maf in mafia:
-            maf.role = roles.Mafia
+            maf.role = role.Mafia
 
         # assign the rest of the roles
-        # town_roles = [roles.Investigator, roles.Medium, roles.Doctor, roles.Escort]
-        town_roles = [roles.Investigator]
-        n_non_passive = math.ceil(len(roster.townies) / 3)
-        for non_passive in set(random.sample(roster.townies, n_non_passive)):
-            non_passive.role = random.choice(town_roles)
+        wr_roles = list(self.WEIGHTED_ROLES.keys())
+        wr_weights = list(self.WEIGHTED_ROLES.values())
+
+        for townie in roster.townies:
+            chosen_role: Type[Role] = random.choices(wr_roles, weights=wr_weights)[0]
+            townie.role = chosen_role
 
         self.log.info("assigned roles: %r", roster)
 

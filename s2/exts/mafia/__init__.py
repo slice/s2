@@ -1,10 +1,11 @@
+import fractions
 from typing import Any, Dict, Optional, Union, cast
 
 import discord
 from discord.ext import commands
 
 import lifesaver
-from lifesaver.utils.formatting import codeblock
+from lifesaver.utils import Table, codeblock
 
 from .game import MafiaGame
 
@@ -149,6 +150,41 @@ class Mafia(lifesaver.Cog):
             self.log.exception("error during mafia")
         finally:
             del self.sessions[channel_id]
+
+    @mafia.command(name="roles")
+    async def mafia_roles(self, ctx: lifesaver.Context) -> None:
+        """Shows all roles and their chances"""
+        total = sum(MafiaGame.WEIGHTED_ROLES.values())
+
+        mafia_formula = (
+            "min(\N{LEFT FLOOR} n_players \N{DIVISION SIGN} 3 \N{RIGHT FLOOR}, 3)"
+        )
+
+        table = Table("Role", "Chance", "Fraction", "Weight")
+
+        for (role, weight) in MafiaGame.WEIGHTED_ROLES.items():
+            rational = weight / total
+            fraction = fractions.Fraction(weight, total)
+            percentage = rational * 100
+
+            table.add_row(
+                role.name,
+                f"{percentage:.2f}%",
+                f"{fraction.numerator}/{fraction.denominator}",
+                str(weight),
+            )
+
+        roles = await table.render()
+
+        await ctx.send(
+            (
+                f"The number of mafia is calculated using: `{mafia_formula}`\n"
+                "Everyone has an equal chance of becoming mafia.\n\n"
+                f"After the mafia has been picked, townie roles are assigned:\n\n"
+                f"{codeblock(roles)}\n\n"
+                f"For more information on roles, type `{ctx.prefix}help mafia`."
+            )
+        )
 
     @mafia.group(name="debug", invoke_without_command=True)
     @commands.is_owner()
