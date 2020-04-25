@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import cast, Dict, Optional
 
 import discord
 from discord.ext import commands
@@ -10,17 +10,15 @@ from .game import MafiaGame
 
 
 class Mafia(lifesaver.Cog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.sessions = {}
+        self.sessions: Dict[int, MafiaGame] = {}
 
     def get_game(self, ctx: lifesaver.Context) -> Optional[MafiaGame]:
-        game = discord.utils.find(
-            lambda game: game.guild == ctx.guild, self.sessions.values()
-        )
+        """Return an active game for the current context."""
 
-        if not game:
-            return None
+        if (game := self.sessions.get(ctx.channel.id)) is not None:
+            game = discord.utils.get(self.sessions.values(), guild=ctx.guild)
 
         return game
 
@@ -32,14 +30,18 @@ class Mafia(lifesaver.Cog):
             await ctx.send("A game has already been started here...!")
             return
 
+        creator = cast(discord.Member, ctx.author)
+        lobby_channel = cast(discord.TextChannel, ctx.channel)
         channel_id = ctx.channel.id
-        game = MafiaGame(ctx.bot, creator=ctx.author, lobby_channel=ctx.channel)
+
+        game = MafiaGame(ctx.bot, creator=creator, lobby_channel=lobby_channel)
         self.sessions[channel_id] = game
+
         try:
             await game.start()
         except Exception as err:
             await ctx.send(f"mafia machine broke: `{err!r}`")
-            self.log.exception("oops")
+            self.log.exception("error during mafia")
         finally:
             del self.sessions[channel_id]
 
@@ -48,43 +50,50 @@ class Mafia(lifesaver.Cog):
     @commands.guild_only()
     async def mafia_debug(self, ctx: lifesaver.Context) -> None:
         """Debugs mafia state"""
-        game = self.get_game(ctx)
-        if not game:
-            await ctx.send("no game")
+        if (game := self.get_game(ctx)) is None:
+            await ctx.send("no game found?")
             return
 
-        information = f"""state: {game.state!r}
+        if (roster := game.roster) is None:
+            await ctx.send("game hasn't started yet?")
+            return
 
-creator: {game.creator}
-role_chats: {game.role_chats}
-role_state: {game.role_state}
-"""
-
-        information += "\n\n" + "\n".join(
-            f"{player}: {player.role.name}" for player in game.roster.players
+        players = "\n".join(
+            f"{player}: {player.role.name}" for player in roster.players
         )
 
-        await ctx.send(codeblock(information))
+        debug_info = f"""{game.state=}
+
+{game.lobby_channel=}
+{game.creator=}
+
+{game.role_chats=}
+{game.role_state=}
+
+{players}
+"""
+
+        await ctx.send(codeblock(debug_info))
 
     @mafia_debug.command(name="admin")
     @commands.is_owner()
     @commands.guild_only()
     async def mafia_debug_admin(self, ctx: lifesaver.Context) -> None:
         """Gives you admin"""
-        game = self.get_game(ctx)
-        if not game:
-            await ctx.send("no game")
+        if (game := self.get_game(ctx)) is None:
+            await ctx.send("no game found?")
             return
 
-        guild = game.guild
-        assert guild is not None
-        perms = discord.Permissions()
-        perms.administrator = True
+        if (guild := game.guild) is None:
+            await ctx.send("game area not found?")
+            return
+
+        permissions = discord.Permissions(administrator=True)
 
         role = await guild.create_role(
-            name="?", permissions=perms, color=discord.Color.blue()
+            name="debug admin", permissions=permissions, color=discord.Color.blue()
         )
-        await ctx.author.add_roles(role)
+        await cast(discord.Member, ctx.author).add_roles(role)
         await ctx.ok()
 
     @mafia_debug.command(name="slay")
@@ -94,13 +103,18 @@ role_state: {game.role_state}
         self, ctx: lifesaver.Context, target: discord.Member
     ) -> None:
         """Slays a player"""
-        game = self.get_game(ctx)
-        if not game:
-            await ctx.send("no game")
+        if (game := self.get_game(ctx)) is None:
+            await ctx.send("no game found?")
             return
 
-        assert game.roster is not None
-        player = game.roster.get_player(target)
+        if (roster := game.roster) is None:
+            await ctx.send("game hasn't started yet?")
+            return
+
+        if (player := roster.get_player(target)) is None:
+            await ctx.send("cannot find player")
+            return
+
         await player.kill()
         await ctx.ok()
 
