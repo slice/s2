@@ -76,12 +76,17 @@ INVESTIGATOR_RESULT_SUSPICIOUS = [
     "You find that the suspect is making a lot of noise.",
     "You find that the suspect's garage is leaking red fluid.",
     "You find that your target has a shed full of weapons.",
+    "You find that your target has a collection of voodoo dolls.",
+    "You find strange liquids oozing from your suspect's dumpster.",
 ]
 
 INVESTIGATOR_RESULT_CLEAN = [
     "You find nothing out of the ordinary with your target.",
     "You find nothing suspicious with your target.",
     "You find nothing strange with the suspect.",
+    "You don't find anything strange with the suspect.",
+    "You don't find anything suspicious with the suspect.",
+    "You don't find anything out of the ordinary with the suspect.",
 ]
 
 ROLE_GREETINGS = {
