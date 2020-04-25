@@ -172,8 +172,8 @@ class Mafia(lifesaver.Cog):
 {game.lobby_channel=}
 {game.creator=}
 
-{game.role_chats=}
-{game.role_state=}
+{game.role_chats=!r}
+{game.role_state=!r}
 
 {players}
 """
