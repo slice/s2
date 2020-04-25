@@ -756,9 +756,6 @@ class MafiaGame:
                 # it's day, so move onto night
                 self.daytime = False
 
-    async def _send_invite_to_lobby(self) -> None:
-        assert self.all_chat is not None
-
     async def _update_filling_message(self) -> None:
         assert self.guild is not None
         assert self.all_chat is not None
@@ -863,7 +860,6 @@ class MafiaGame:
 
         # wait for everyone to join the server
         self.state = MafiaGameState.FILLING
-        await self._send_invite_to_lobby()
         await self._lock()  # lock until everyone has joined
         await self._update_filling_message()
         await self._players_joined_event.wait()
