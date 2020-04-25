@@ -121,26 +121,14 @@ class Role(abc.ABC, Generic[S]):
         return game.role_chats.get(cls)
 
     @classmethod
-    async def on_message(
-        cls, ctx: RoleActionContext, state: Optional[S]
-    ) -> Optional[S]:
-        """Handle messages sent in the player's personal channel."""
-
-    @classmethod
-    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
-        """Handle the night's beginning."""
-
-    @classmethod
-    async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
-        """Handle the night's end."""
-
-    @classmethod
     def n_players(cls, roster: Roster) -> int:
         """Return the amount of players who should have this role."""
         return 1
 
     @staticmethod
     def listener(*, priority: int = 0):
+        """A decorator that listens for events."""
+
         def decorator(func):
             @functools.wraps(func)
             async def _handler(*args, **kwargs):
@@ -150,6 +138,20 @@ class Role(abc.ABC, Generic[S]):
             return classmethod(_handler)
 
         return decorator
+
+    @listener()
+    async def on_message(
+        cls, ctx: RoleActionContext, state: Optional[S]
+    ) -> Optional[S]:
+        """Handle messages sent in the player's personal channel."""
+
+    @listener()
+    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
+        """Handle the night's beginning."""
+
+    @listener()
+    async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
+        """Handle the night's end."""
 
 
 class PickerRole(Role[Optional["Player"]]):
