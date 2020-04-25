@@ -83,6 +83,15 @@ class Mafia(lifesaver.Cog):
 
         await ctx.send(codeblock(debug_info))
 
+    @mafia_debug.command(name="clean")
+    @commands.is_owner()
+    async def mafia_debug_clean(self, ctx: lifesaver.Context) -> None:
+        """Deletes any guilds created for Mafia games"""
+        for guild in ctx.bot.guilds:
+            if "mafia " in guild.name and guild.owner == ctx.bot.user:
+                await guild.delete()
+        await ctx.ok()
+
     @mafia_debug.command(name="admin")
     @commands.is_owner()
     @commands.guild_only()
