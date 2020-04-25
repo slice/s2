@@ -32,6 +32,12 @@ MAFIA_PICK = [
     "Picked **{victim}** to be tonight's victim.",
 ]
 
+MAFIA_FAILURE = [
+    "Someone prevented **{victim}**'s death!",
+    "**{victim}** managed to survive your attack!",
+    "**{victim}** was healed!",
+]
+
 MAFIA_SUCCESS = [
     "**{victim}** was killed!",
     "**{victim}** is now dead.",
@@ -44,6 +50,26 @@ INVESTIGATOR_PICK = [
     "OK, you'll visit **{player}'s house** tonight.",
     "Okay, paying a visit to **{player}**.",
 ]
+
+DOCTOR_PICK = [
+    "Okay, healing **{player}** tonight.",
+    "OK, going to heal **{player}** tonight.",
+]
+
+DOCTOR_RESULT = {
+    "healed": [
+        "You have saved {target}'s life!",
+        "You just saved {target}'s life!",
+        "You saved {target}'s life!",
+        "You prevented {target}'s death!",
+        "{target} was saved!",
+    ],
+    "noop": [
+        "{target} wasn't attacked, so nothing happened.",
+        "Nothing happened! {target} wasn't attacked.",
+        "Nobody attacked {target}, so nothing happened.",
+    ],
+}
 
 INVESTIGATOR_RESULT_SUSPICIOUS = [
     "You find that your target has a knife collection.",
@@ -59,11 +85,15 @@ INVESTIGATOR_RESULT_CLEAN = [
 ]
 
 ROLE_GREETINGS = {
-    "Innocent": "**You are innocent!** Your goal is to survive and hang the mafia.",
+    "Innocent": "**You are Innocent!** Your goal is to survive and hang the mafia.",
     "Investigator": (
-        "Hello there, **investigator!** You will be able to visit "
+        "Hello there, **Investigator!** You will be able to visit "
         "someone's house every night and determine their suspiciousness. "
         "This is vital to defeating the mafia and helping your fellow townies survive!"
+    ),
+    "Doctor": (
+        "Hello, **Doctor!** At night, you'll be able to heal someone and "
+        "prevent their death if they're attacked."
     ),
 }
 
@@ -81,8 +111,12 @@ ACTION_PROMPTS = {
         "**typing `!visit <username>` in chat**. You have 30 seconds!\n\n"
         "{players}"
     ),
+    "Doctor": (
+        "Pick someone to heal tonight by **typing `!heal <username>` in chat**. "
+        "If they aren't attacked, then nothing will happen. "
+        "You have 30 seconds!\n\n{players}"
+    ),
 }
-
 
 GAME_START = [
     "{mentions}: The main game will take place here. Have fun!",

@@ -200,17 +200,69 @@ class Mafia(Role):
     async def on_night_end(
         cls, ctx: RoleActionContext, victim: Optional["Player"]
     ) -> None:
-        if victim is not None:
-            await victim.kill()
+        if victim is None:
+            return
+
+        ctx.game.memory[f"attacked_{victim.id}"] = True
+
+        was_healed = any(
+            value == victim
+            for (key, value) in ctx.game.memory.items()
+            if isinstance(key, str) and key.startswith("heal_target_")
+        )
+
+        if was_healed:
             await ctx.group_channel.send(
-                "@everyone: " + msg(messages.MAFIA_SUCCESS, victim=victim)
+                "@everyone: " + msg(messages.MAFIA_FAILURE, victim=victim)
             )
+            return
+
+        await victim.kill()
+        await ctx.group_channel.send(
+            "@everyone: " + msg(messages.MAFIA_SUCCESS, victim=victim)
+        )
 
 
 class Doctor(Role):
     """Able to prevent someone from dying if they are attacked."""
 
     name = "Doctor"
+
+    state_key = "heal_target"
+
+    @classmethod
+    def _targets(cls, ctx: RoleActionContext) -> Set["Player"]:
+        return ctx.roster.alive - {ctx.player}
+
+    @Role.listener()
+    async def on_message(
+        cls, ctx: RoleActionContext, state: Optional["Player"]
+    ) -> Optional["Player"]:
+        target = await ctx.select_command("!heal", cls._targets(ctx))
+        if target is None:
+            return state
+        await ctx.reply(msg(messages.DOCTOR_PICK, player=target))
+        return target
+
+    @Role.listener()
+    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
+        await ctx.send(
+            msg(
+                messages.ACTION_PROMPTS["Doctor"],
+                players=user_listing(cls._targets(ctx)),
+            )
+        )
+
+    @Role.listener(priority=-100)
+    async def on_night_end(
+        cls, ctx: RoleActionContext, target: Optional["Player"]
+    ) -> None:
+        if not target:
+            return
+
+        was_attacked = f"attacked_{target.id}" in ctx.game.memory
+        message_key = "healed" if was_attacked else "noop"
+        await ctx.send(msg(messages.DOCTOR_RESULT[message_key], target=target))
 
 
 class Escort(Role):
