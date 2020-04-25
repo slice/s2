@@ -17,14 +17,12 @@ LOBBY_INVITE = (
 )
 
 MAFIA_GREET_FLAVOR = [
+    "Hello, mafia!",
+    "Hello there, mafia!",
     "Greetings, mafia!",
-    "Say hello, mafia!",
-    "Say hi, mafia!",
 ]
 
-MAFIA_GREET = (
-    "@everyone: {flavor} In this channel, you can secretly talk to your evil partner."
-)
+MAFIA_GREET = "@everyone: {flavor} Plan out who to kill each night in this channel."
 
 MAFIA_PICK = [
     "Okay, **{victim}** will be killed tonight.",
