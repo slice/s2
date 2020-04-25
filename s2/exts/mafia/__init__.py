@@ -73,7 +73,64 @@ class Mafia(lifesaver.Cog):
     @lifesaver.group(hidden=True, invoke_without_command=True)
     @commands.guild_only()
     async def mafia(self, ctx: lifesaver.Context) -> None:
-        """Starts a game of mafia"""
+        """Creates a Mafia lobby
+
+        Creates an interactive lobby for a game of Mafia, heavily inspired by
+        the online game Town of Salem created by BlankMediaGames. If you are
+        familiar with Town of Salem, then you'll right at home with Mafia!
+
+        You need at least 3 players to start a game. However, 8 or more players
+        are recommended or else the game won't be very fun. Try 10 or more
+        players for an even better experience!
+
+        The bot creates a server for each game, so make sure you aren't in 100
+        servers or else you won't be able to join.
+
+        In each game, the mafia and the town try to eliminate each other.
+        The last group standing wins!
+
+        The game takes place through day/night cycles. During daytime (except
+        for the first day), everyone discusses a potential suspect. After
+        discussion time, everyone can vote for someone who they wish to hang.
+
+        During night, hardly anybody is asleep! At this time, the mafia can
+        commit murder and townies can perform their abilities.
+
+        ------------------------------------------------------------------------
+
+        Each player is randomly assigned one of the following roles:
+
+        Town: Investigator (also: "invest", "inv")
+
+            You may visit someone every night to determine their suspiciousness.
+
+        Town: Innocent (also: "inno")
+
+            You are an ordinary town member.
+
+        Mafia: Mafia
+
+            You are a member of the mafia. Each night, you and your fellow mafia
+            can decide on someone to kill. Only one target may be chosen a
+            night, so make sure your collective decision wisely!
+
+        Additional roles may be added or existing roles may be removed in the
+        future, so keep your eyes peeled!.
+
+        ------------------------------------------------------------------------
+
+        Additional notes:
+
+        * You can set your will, a message displayed to everyone upon the
+          discovery of your death, by typing "!will" followed by a space and
+          some text in your personal channel. Wills are limited to 1,000
+          characters.
+
+        * When using "!" commands that allow you to select from a list of
+          players, fuzzy matching is performed. This means you can type
+          usernames very loosely and the bot will likely figure out who you
+          wanted to choose.
+        """
         if ctx.channel.id in self.sessions:
             await ctx.send("A game has already been started here...!")
             return
