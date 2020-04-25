@@ -90,6 +90,8 @@ class LobbyMenu(menus.Menu):
         self.stop()
 
     async def on_start(self, payload: discord.RawReactionActionEvent) -> None:
+        if payload.user_id != self.game.creator.id:
+            return
         self.stop()
 
     def reaction_check(self, payload: discord.RawReactionActionEvent) -> bool:
