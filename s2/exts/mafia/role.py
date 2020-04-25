@@ -11,8 +11,9 @@ __all__ = [
 ]
 
 import abc
+import functools
 import math
-from typing import Generic, Any, Tuple, TypeVar, Optional, Set, TYPE_CHECKING
+from typing import Generic, Any, TypeVar, Optional, Set, TYPE_CHECKING
 
 import discord
 
@@ -133,18 +134,24 @@ class Role(abc.ABC, Generic[S]):
         """Return the amount of players who should have this role."""
         return 1
 
-    def __str__(self) -> str:
-        return self.name
+    @staticmethod
+    def listener(*, priority: int = 0):
+        def decorator(func):
+            @functools.wraps(func)
+            async def _handler(*args, **kwargs):
+                return await func(*args, **kwargs)
 
-    def __repr__(self) -> str:
-        return f"<Role {self.name}>"
+            _handler._listener_priority = priority
+            return classmethod(_handler)
+
+        return decorator
 
 
 class Innocent(Role):
     """The ordinary people of the town.
 
-    This role is implicitly special in that any amount of players can have it,
-    and that players receive this role by default.
+    This role is special in that any amount of players can have it, and that
+    players receive this role by default.
     """
 
     name = "Innocent"
@@ -166,7 +173,7 @@ class Mafia(Role):
 
     state_key = "mafia_victim"
 
-    @classmethod
+    @Role.listener()
     async def on_message(
         cls, ctx: RoleActionContext, state: Optional["Player"]
     ) -> Optional["Player"]:
@@ -178,7 +185,7 @@ class Mafia(Role):
         )
         return target
 
-    @classmethod
+    @Role.listener()
     async def on_night_begin(cls, ctx: RoleActionContext) -> None:
         assert ctx.roster is not None
         await ctx.group_channel.send(
@@ -189,7 +196,7 @@ class Mafia(Role):
             )
         )
 
-    @classmethod
+    @Role.listener()
     async def on_night_end(
         cls, ctx: RoleActionContext, victim: Optional["Player"]
     ) -> None:
@@ -223,7 +230,7 @@ class Investigator(Role):
     def _targets(cls, ctx: RoleActionContext) -> Set["Player"]:
         return ctx.roster.alive - {ctx.player}
 
-    @classmethod
+    @Role.listener()
     async def on_message(
         cls, ctx: RoleActionContext, state: Optional["Player"]
     ) -> Optional["Player"]:
@@ -233,7 +240,7 @@ class Investigator(Role):
         await ctx.reply(msg(messages.INVESTIGATOR_PICK, player=target))
         return target
 
-    @classmethod
+    @Role.listener()
     async def on_night_begin(cls, ctx: RoleActionContext) -> None:
         assert ctx.roster is not None
 
@@ -244,7 +251,7 @@ class Investigator(Role):
             )
         )
 
-    @classmethod
+    @Role.listener()
     async def on_night_end(
         cls, ctx: RoleActionContext, target: Optional["Player"]
     ) -> None:

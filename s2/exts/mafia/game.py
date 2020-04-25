@@ -387,31 +387,34 @@ class MafiaGame:
         # dump the previous role state
         self.memory = {}
 
-        def iter_nocturnal() -> Iterator[Player]:
+        def iter_nocturnal(*, priority_by: str) -> Iterator[Player]:
             assert self.roster is not None
+
+            # for players in grouped roles, only handle one player per grouped
+            # role. this makes the event handlers only trigger once a night.
             handled_grouped_roles: Set[Type[Role]] = set()
-            for player in self.roster.nocturnal:
+
+            nocturnal = sorted(
+                self.roster.nocturnal,
+                key=lambda player: getattr(player.role, priority_by)._listener_priority,
+                reverse=True,
+            )
+
+            for player in nocturnal:
                 if player.role in handled_grouped_roles:
-                    self.log.info(
-                        "%s: already seen someone with grouped role %r, skipping",
-                        player,
-                        player.role,
-                    )
                     continue
                 self.log.info("%s: yielding", player)
                 yield player
                 if player.role.grouped:
-                    self.log.info(
-                        "%s: has a grouped role, not yielding anymore", player
-                    )
                     handled_grouped_roles.add(player.role)
 
-        for player in iter_nocturnal():
+        for player in iter_nocturnal(priority_by="on_night_begin"):
             if player.dead:
                 # they're dead, so don't even bother handling this
                 self.log.info("%s: skipping begin event, they dead", player)
                 continue
             ctx = RoleActionContext(game=self, player=player)
+            self.log.info("on_night_begin: %s (%s)", player, player.role.name)
             await player.role.on_night_begin(ctx)  # type: ignore
 
         # handle actions from nocturnal players, such as the mafia choosing who
@@ -425,7 +428,7 @@ class MafiaGame:
         self._handling_noctural_actions = False
 
         # now to carry out what decisions were made during the night...
-        for player in iter_nocturnal():
+        for player in iter_nocturnal(priority_by="on_night_end"):
             self.log.info("%s: handling end event", player)
             state_key = resolve_state_key(player)
 
@@ -434,6 +437,7 @@ class MafiaGame:
 
             state = self.memory.get(state_key)
             ctx = RoleActionContext(game=self, player=player)
+            self.log.info("on_night_end: %s (%s)", player, player.role.name)
             await player.role.on_night_end(ctx, state)  # type: ignore
 
         await asyncio.sleep(3)
