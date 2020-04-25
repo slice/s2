@@ -542,7 +542,7 @@ class MafiaGame:
         """Prevent anyone from sending messages in the game channel."""
         assert self.all_chat is not None
         assert self.guild is not None
-        await self.all_chat.set_permissions(self.guild.default_role, **HUSH_PERMS)  # type: ignore
+        await self.all_chat.set_permissions(self.guild.default_role, **HUSH_PERMS)  # type: ignore  # noqa
 
     async def _unlock(self) -> None:
         """Undo a lock."""
