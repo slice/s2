@@ -42,7 +42,7 @@ class Mafia(lifesaver.Cog):
         lobby_channel = cast(discord.TextChannel, ctx.channel)
         channel_id = ctx.channel.id
 
-        game = MafiaGame(ctx.bot, creator=creator, lobby_channel=lobby_channel)
+        game = MafiaGame(ctx.bot, creator=creator, lobby_channel=lobby_channel, ctx=ctx)
         self.sessions[channel_id] = game
 
         try:

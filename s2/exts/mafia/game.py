@@ -23,6 +23,7 @@ from typing import (
 )
 
 import discord
+import lifesaver
 from lifesaver.utils import pluralize, codeblock
 
 from . import messages, role
@@ -30,6 +31,7 @@ from .permissions import ALLOW, BLOCK, HUSH, HUSH_PERMS, NEUTRAL_HUSH_PERMS
 from .player import Player
 from .role import Role, RoleActionContext
 from .roster import Roster
+from .lobby import LobbyMenu
 from .utils import (
     select_player,
     resolve_state_key,
@@ -59,10 +61,18 @@ class MafiaGame:
     """A class representing a game of mafia."""
 
     def __init__(
-        self, bot, *, creator: discord.Member, lobby_channel: discord.TextChannel
+        self,
+        bot,
+        *,
+        creator: discord.Member,
+        lobby_channel: discord.TextChannel,
+        ctx: lifesaver.Context,
     ):
         self.bot = bot
         self.log = logging.getLogger(f"{__name__}[{lobby_channel.id}]")
+
+        #: The :class:`lifesaver.Context` that created this game.
+        self._ctx = ctx
 
         #: The set of all game participants as Discord members of the original
         #: server.
@@ -262,84 +272,11 @@ class MafiaGame:
     async def _gather_players(self) -> bool:
         """Interactively gather game participants."""
         self.log.info("gathering players for game")
-        bare_minimum = 3
-        lobby = self.lobby_channel
 
-        def embed() -> discord.Embed:
-            required = 3 - len(self.participants)
-            required_text = pluralize(player=required, with_indicative=True)
-
-            embed = discord.Embed(
-                title="Mafia Lobby",
-                description=user_listing(self.participants),
-                color=discord.Color.gold(),
-            )
-            embed.set_author(name=str(self.creator), icon_url=self.creator.avatar_url)
-            if required > 0:
-                embed.set_footer(text=f"{required_text} required")
-            return embed
-
-        join_emoji = "\N{RAISED HAND WITH FINGERS SPLAYED}"
-        start_emoji = "\N{WHITE HEAVY CHECK MARK}"
-        abort_emoji = "\N{CROSS MARK}"
-
-        prompt = await lobby.send(
-            msg(messages.LOBBY_CREATED, creator=self.creator, join_emoji=join_emoji),
-            embed=embed(),
-        )
-        await prompt.add_reaction(join_emoji)
-        await prompt.add_reaction(abort_emoji)
-
-        def reaction_check(reaction, user):
-            return reaction.message.id == prompt.id and not user.bot
-
-        while True:
-            reaction, user = await self.bot.wait_for(
-                "reaction_add", check=reaction_check
-            )
-
-            if reaction.emoji not in (join_emoji, start_emoji, abort_emoji):
-                continue
-
-            starting = reaction.emoji == start_emoji and user == self.creator
-            is_aborting = reaction.emoji == abort_emoji and user == self.creator
-
-            if is_aborting:
-                await lobby.send(
-                    msg(messages.LOBBY_CANCELLED, mention=self.creator.mention)
-                )
-                await prompt.delete()
-                return False
-
-            if reaction.emoji == join_emoji:
-                self.log.info("%r is joining the game", user)
-                self.participants.add(user)
-                self.bot.loop.create_task(prompt.edit(embed=embed()))
-
-                if len(self.participants) >= bare_minimum:
-                    # 3 is the bare minimum
-                    await prompt.add_reaction(start_emoji)
-
-            if starting:
-                # time to start!
-
-                if len(self.participants) < bare_minimum:
-                    await lobby.send(
-                        msg(
-                            messages.LOBBY_CANT_FORCE_START,
-                            mention=self.creator.mention,
-                        )
-                    )
-                    continue
-
-                await prompt.edit(content=msg(messages.LOBBY_STARTING), embed=None)
-
-                try:
-                    await prompt.clear_reactions()
-                except discord.HTTPException:
-                    pass
-
-                return True
+        menu = LobbyMenu(game=self)
+        await menu.start(self._ctx, channel=self.lobby_channel, wait=True)
+        await menu.message.delete()
+        return not menu.was_cancelled
 
     async def _setup_game_area(self) -> None:
         """Create and prepare the game area."""
@@ -909,7 +846,7 @@ class MafiaGame:
         self.log.info("game starting...")
 
         success = await self._gather_players()
-        if success is False:
+        if not success:
             self.log.info("hmm. game was aborted!")
             return
 

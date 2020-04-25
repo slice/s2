@@ -1,6 +1,7 @@
 discord.py
+git+https://github.com/Rapptz/discord-ext-menus@master#egg=discord-ext-menus
 git+https://github.com/Gorialis/jishaku@master#egg=jishaku
-git+https://github.com/slice/lifesaver
+git+https://github.com/slice/lifesaver@master#egg=discord-py-lifesaver
 
 pylast==2.3.0
 uvloop
