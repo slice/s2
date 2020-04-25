@@ -633,6 +633,18 @@ class MafiaGame:
         await channel.send(f"{player}'s will:\n\n" + codeblock(player.will))
         await asyncio.sleep(5)
 
+    def _role_reveal(self, player: Player, *, pronoun: bool = False) -> discord.Embed:
+        title = (
+            msg(messages.THEY_ROLE, role=player.role.name)
+            if pronoun
+            else msg(messages.WAS_ROLE, died=player, role=player.role.name)
+        )
+
+        return discord.Embed(
+            title=title,
+            color=(discord.Color.red() if player.role.evil else discord.Color.green()),
+        )
+
     async def _check_game_over(self) -> None:
         assert self.roster is not None
 
@@ -651,7 +663,7 @@ class MafiaGame:
             await self.all_chat.send(msg(messages.FOUND_DEAD, victim=victim))
             await asyncio.sleep(3.0)
             await self._display_will(victim)
-            await self.all_chat.send(msg(messages.THEY_ROLE, role=victim.role.name))
+            await self.all_chat.send(embed=self._role_reveal(victim, pronoun=True))
             await asyncio.sleep(5.0)
 
         # someone has died, check if the game can end now
@@ -705,12 +717,7 @@ class MafiaGame:
             await self._hang_with_last_words(hanged)
 
             await asyncio.sleep(3)
-
-            # reveal role
-            await self.all_chat.send(
-                msg(messages.WAS_ROLE, died=hanged, role=hanged.role.name)
-            )
-
+            await self.all_chat.send(embed=self._role_reveal(hanged))
             await asyncio.sleep(5)
 
             await self._check_game_over()
