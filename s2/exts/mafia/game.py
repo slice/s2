@@ -160,14 +160,6 @@ class MafiaGame:
         assert self.guild is not None
         return self.guild.categories[0]
 
-    @property
-    def _listeners(self):
-        return {
-            "on_member_join": self._member_join,
-            "on_member_remove": self._member_remove,
-            "on_message": self._on_message,
-        }
-
     async def on_member_join(self, member: discord.Member) -> None:
         assert self.guild is not None
 
