@@ -99,11 +99,12 @@ class MafiaGame:
         #: The dictionary of personal chats for each player in the game.
         self.personal_chats: Dict[Player, discord.TextChannel] = {}
 
-        #: The dictionary of role states. Updated when performing actions.
-        self.role_state: Dict[str, Any] = {}
+        #: The memory dictionary. Used to track state from actions performed at
+        #: night.
+        self.memory: Dict[Union[str, Player, Role], Any] = {}
 
         #: The lock for role states.
-        self._role_state_lock = asyncio.Lock()
+        self._memory_lock = asyncio.Lock()
 
         #: The guild where the game is taking place.
         self.guild: Optional[discord.Guild] = None
@@ -365,7 +366,7 @@ class MafiaGame:
         # grab previous state
         prev_state = None
         if (state_key := resolve_state_key(player)) is not None:
-            prev_state = self.role_state.get(state_key)
+            prev_state = self.memory.get(state_key)
 
         ctx = RoleActionContext(game=self, player=player, message=message)
         new_state = await player.role.on_message(ctx, prev_state)  # type: ignore
@@ -373,8 +374,8 @@ class MafiaGame:
         # update role state from on_message if the state has changed
         if state_key is not None and new_state != prev_state:
             self.log.info("updating %r to %r", state_key, new_state)
-            async with self._role_state_lock:
-                self.role_state[state_key] = new_state
+            async with self._memory_lock:
+                self.memory[state_key] = new_state
 
     async def _nighttime(self) -> None:
         assert self.roster is not None
@@ -384,7 +385,7 @@ class MafiaGame:
         await self._lock()
 
         # dump the previous role state
-        self.role_state = {}
+        self.memory = {}
 
         def iter_nocturnal() -> Iterator[Player]:
             assert self.roster is not None
@@ -431,7 +432,7 @@ class MafiaGame:
             if state_key is None:
                 continue
 
-            state = self.role_state.get(state_key)
+            state = self.memory.get(state_key)
             ctx = RoleActionContext(game=self, player=player)
             await player.role.on_night_end(ctx, state)  # type: ignore
 
@@ -635,7 +636,7 @@ class MafiaGame:
         assert self.all_chat is not None
         assert self.roster is not None
 
-        if (victim := self.role_state.get("mafia_victim")) is not None:
+        if (victim := self.memory.get("mafia_victim")) is not None:
             await self.all_chat.send(msg(messages.FOUND_DEAD, victim=victim))
             await asyncio.sleep(3.0)
             await self._display_will(victim)
