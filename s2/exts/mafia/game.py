@@ -423,7 +423,7 @@ class MafiaGame:
         # be "carried out".
         self.log.info("handling nocturnal actions")
         self._handling_nocturnal_actions = True
-        await asyncio.sleep(2 if self.DEBUG else 36)
+        await asyncio.sleep(10 if self.DEBUG else 36)
         self._handling_nocturnal_actions = False
 
         # now to carry out what decisions were made during the night...
@@ -578,10 +578,10 @@ class MafiaGame:
         )
         await self.all_chat.send(msg(messages.THANK_YOU))
 
-        await asyncio.sleep(2.0)
+        await asyncio.sleep(2)
         await self._unlock()
         await self.alltalk()
-        await asyncio.sleep(10.0)
+        await asyncio.sleep(10)
 
     def _tally_up_votes(self, votes_required: int) -> Optional[Tuple[int, int]]:
         vote_tallies: Dict[int, int] = {
@@ -615,7 +615,7 @@ class MafiaGame:
             f"\N{SKULL} {player.mention}, you have been voted to be hanged. "
             "Do you have any last words? You have 15 seconds."
         )
-        await asyncio.sleep(3.0 if self.DEBUG else 15.0)
+        await asyncio.sleep(5 if self.DEBUG else 15)
         await self.all_chat.set_permissions(player.member, overwrite=None)
         await player.kill()
         await self._display_will(player)
@@ -663,11 +663,11 @@ class MafiaGame:
 
         if (victim := self.memory.get(Key("mafia_victim"))) is not None and victim.dead:
             await self.all_chat.send(msg(messages.FOUND_DEAD, victim=victim))
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(3)
             await self._display_will(victim)
             await self.all_chat.send(embed=self._role_reveal(victim, pronoun=True))
             await self._update_role_listing()
-            await asyncio.sleep(5.0)
+            await asyncio.sleep(5)
 
         # someone has died, check if the game can end now
         await self._check_game_over()
@@ -679,8 +679,8 @@ class MafiaGame:
         votes_required = max(math.floor(len(self.roster.alive) / 3), 1)
 
         # lengths
-        discussion_time = 45
-        voting_time = 30
+        discussion_time = 5 if self.DEBUG else 45
+        voting_time = 15 if self.DEBUG else 30
 
         await self.all_chat.send(msg(messages.DISCUSSION_TIME_ANNOUNCEMENT))
         await asyncio.sleep(discussion_time)
@@ -737,7 +737,7 @@ class MafiaGame:
         await self.all_chat.send(
             msg(messages.GAME_START, mentions=mention_set(self.roster.players))
         )
-        await asyncio.sleep(5.0)
+        await asyncio.sleep(5)
 
         while True:
             # send current day/daytime state to players
