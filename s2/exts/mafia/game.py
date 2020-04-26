@@ -22,6 +22,7 @@ from typing import (
 )
 
 import discord
+from discord.http import Route
 import lifesaver
 from lifesaver.utils import pluralize, codeblock
 
@@ -264,6 +265,12 @@ class MafiaGame:
             guild = self.guild = await self.bot.create_guild(name=f"mafia {date}")
         except discord.HTTPException as err:
             raise RuntimeError("failed to create guild") from err
+
+        # set default notifications to mentions only
+        await self.bot.http.request(
+            Route("PATCH", "/guilds/{guild_id}", guild_id=guild.id),
+            json={"default_message_notifications": 1},
+        )
 
         # restrict the default set of permissions so that people can't cause
         # any trouble...
