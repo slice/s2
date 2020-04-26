@@ -125,6 +125,9 @@ class MafiaGame:
         #: The role for dead players.
         self.dead_role: Optional[discord.Role] = None
 
+        #: The role for all players, dead or alive.
+        self.player_role: Optional[discord.Role] = None
+
         #: The current state of the game.
         self.state = MafiaGameState.WAITING
 
@@ -169,6 +172,7 @@ class MafiaGame:
     async def on_member_join(self, member: discord.Member) -> None:
         """Handle a member join."""
         assert self.guild is not None
+        assert self.player_role is not None
 
         self.log.info("joined: %s (%d)", member, member.id)
 
@@ -178,6 +182,7 @@ class MafiaGame:
             await member.add_roles(self.spectator_role)
             return
 
+        await member.add_roles(self.player_role)
         await self.grant_channel_access(member)
 
         if all(participant in self.guild.members for participant in self.participants):
@@ -314,8 +319,14 @@ class MafiaGame:
             name="spectator", color=discord.Color.dark_grey()
         )
         dead_role = self.dead_role = await guild.create_role(
-            name="dead", color=discord.Color.dark_red()
+            name="dead", color=discord.Color.dark_red(), hoist=True
         )
+        player_role = self.player_role = await guild.create_role(
+            name="player", color=discord.Color.default(), hoist=True
+        )
+        await spectator_role.edit(position=1)
+        await dead_role.edit(position=2)
+        await player_role.edit(position=3)
 
         # apply overwrites
         await all_chat.edit(overwrites={dead_role: HUSH, spectator_role: HUSH})

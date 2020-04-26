@@ -68,6 +68,7 @@ class Player:
             )
 
         # prevent speaking everywhere with dead role
+        await self.member.remove_roles(self._game.player_role)
         await self.member.add_roles(self._game.dead_role)
 
         try:
