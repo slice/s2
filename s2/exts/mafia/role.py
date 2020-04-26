@@ -11,6 +11,7 @@ __all__ = [
 ]
 
 import abc
+import asyncio
 import functools
 import math
 from typing import Generic, TypeVar, Optional, Set, TYPE_CHECKING
@@ -349,6 +350,7 @@ class Medium(Role[bool]):
         assert (spec_chat := ctx.game.spectator_chat) is not None
 
         await spec_chat.set_permissions(ctx.player.member, overwrite=cls.seance_perms)
+        await asyncio.sleep(1)
         await spec_chat.send(
             "@everyone: " + msg(messages.MEDIUM_SEANCE_ANNOUNCEMENT, medium=ctx.player)
         )
