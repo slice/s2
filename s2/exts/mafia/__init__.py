@@ -136,6 +136,10 @@ class Mafia(lifesaver.Cog):
             await ctx.send("A game has already been started here...!")
             return
 
+        if len(ctx.bot.guilds) >= 10:
+            await ctx.send("The bot is in too many servers.")
+            return
+
         creator = cast(discord.Member, ctx.author)
         lobby_channel = cast(discord.TextChannel, ctx.channel)
         channel_id = ctx.channel.id
