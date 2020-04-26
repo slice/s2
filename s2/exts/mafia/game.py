@@ -10,7 +10,6 @@ import logging
 import math
 import random
 from typing import (
-    Any,
     AsyncGenerator,
     DefaultDict,
     Dict,
@@ -61,7 +60,7 @@ class EndGame(RuntimeError):
 class MafiaGame:
     """A class representing a game of mafia."""
 
-    WEIGHTED_ROLES = {
+    WEIGHTED_ROLES: Dict[Type[Role], int] = {
         role.Innocent: 20,
         role.Investigator: 10,
         role.Doctor: 10,
@@ -77,7 +76,6 @@ class MafiaGame:
         ctx: lifesaver.Context,
     ):
         self.bot = bot
-        self.log = logging.getLogger(f"{__name__}[{lobby_channel.id}]")
 
         #: The :class:`lifesaver.Context` that created this game.
         self._ctx = ctx
@@ -94,6 +92,9 @@ class MafiaGame:
 
         #: The channel that the lobby was created in.
         self.lobby_channel = lobby_channel or ctx.channel
+
+        #: The logger.
+        self.log = logging.getLogger(f"{__name__}[{self.lobby_channel.id}]")
 
         #: The invitation message in the lobby.
         self.invite_message: Optional[discord.Message] = None
@@ -144,7 +145,7 @@ class MafiaGame:
         self._game_loop_task: Optional[asyncio.Task] = None
 
         #: An event that is set when all players have joined the game guild.
-        self._players_joined_event = asyncio.Event()
+        self._all_players_joined = asyncio.Event()
 
         #: The message that shows who still needs to join.
         self._filling_message: Optional[discord.Message] = None
@@ -165,6 +166,7 @@ class MafiaGame:
         return self.guild.categories[0]
 
     async def on_member_join(self, member: discord.Member) -> None:
+        """Handle a member join."""
         assert self.guild is not None
 
         self.log.info("joined: %s (%d)", member, member.id)
@@ -175,30 +177,17 @@ class MafiaGame:
             await member.add_roles(self.spectator_role)
             return
 
-        assert self.roster is not None
+        await self.grant_channel_access(member)
 
-        # edit the user's personal channel to allow them, since we can't do it at
-        # creation
-        player = self.roster.get_player(member.id)
-        assert player is not None
-        assert player.channel is not None
-        existing_overwrites = player.channel.overwrites
-        await player.channel.edit(overwrites={**existing_overwrites, member: ALLOW})
-
-        # if the player is in a grouped role, give them access to the role channel now
-        if player.role.grouped:
-            role_channel = self.role_chats[player.role]
-            existing_overwrites = role_channel.overwrites
-            await role_channel.edit(overwrites={**existing_overwrites, member: ALLOW})
-
-        if set(self.guild.members) >= self.participants:
+        if all(participant in self.guild.members for participant in self.participants):
             # everyone has joined!
-            self._players_joined_event.set()
+            self._all_players_joined.set()
         else:
             # more still need to join...
             await self._update_filling_message()
 
     async def on_member_remove(self, member: discord.Member) -> None:
+        """Handle a game member leaving the guild."""
         assert self.roster is not None
         if member not in self.roster.players:
             return
@@ -210,6 +199,7 @@ class MafiaGame:
         await self._throw(member)
 
     async def on_message(self, message: discord.Message) -> None:
+        """Handle a message being sent in the guild."""
         await self._handle_always_available_commands(message)
 
         if self._handling_noctural_actions:
@@ -255,12 +245,12 @@ class MafiaGame:
         )
 
         if self._game_loop_task is None:
-            # game hasn't even started, so we need to call goodbye ourselves
-            await self._goodbye()
+            # game hasn't even started yet...!
+            await self.game_over()
 
-    async def _gather_players(self) -> bool:
+    async def gather_participants(self) -> bool:
         """Interactively gather game participants."""
-        self.log.info("gathering players for game")
+        self.log.info("creating lobby menu")
 
         menu = LobbyMenu(game=self)
         await menu.start(self._ctx, channel=self.lobby_channel, wait=True)
@@ -471,7 +461,6 @@ class MafiaGame:
             if (greeting := messages.ROLE_GREETINGS.get(player.role.name)) is not None:
                 await player.channel.send(msg(greeting))
 
-        # send greet in mafia channel
         mafia_chat = self.role_chats[role.Mafia]
         await mafia_chat.send(
             msg(messages.MAFIA_GREET, flavor=msg(messages.MAFIA_GREET_FLAVOR))
@@ -485,6 +474,19 @@ class MafiaGame:
 
     def _has_voted(self, voter: Player) -> bool:
         return self._get_vote(voter) is not None
+
+    async def grant_channel_access(self, member: discord.Member) -> None:
+        """Grant a member access to the channels that they need access to."""
+        assert self.roster is not None
+
+        player = self.roster.get_player(member.id)
+        assert player is not None
+        assert player.channel is not None
+        await player.channel.set_permissions(member, overwrite=ALLOW)
+
+        if player.role.grouped:
+            role_channel = self.role_chats[player.role]
+            await role_channel.set_permissions(member, overwrite=ALLOW)
 
     async def _gather_hanging_votes(self) -> None:
         assert self.all_chat is not None
@@ -887,9 +889,9 @@ class MafiaGame:
         """Gather participants and start the game."""
         self.log.info("game starting...")
 
-        success = await self._gather_players()
+        success = await self.gather_participants()
         if not success:
-            self.log.info("hmm. game was aborted!")
+            self.log.info("game was aborted")
             return
 
         self.log.info("we have enough players, setting up game area")
@@ -919,19 +921,18 @@ class MafiaGame:
             )
         )
 
-        # wait for everyone to join the server
         self.state = MafiaGameState.FILLING
-        await self._lock()  # lock until everyone has joined
+        await self._lock()
         await self._update_filling_message()
-        await self._players_joined_event.wait()
+        await self._all_players_joined.wait()
+
         assert self._filling_message is not None
         await self._filling_message.delete()
         await self.roster.localize()
-        assert all(player.member.guild == self.guild for player in self.roster.players)
         await self._unlock()
 
         await self._notify_roles()
-        await asyncio.sleep(5.0)
+        await asyncio.sleep(5)
 
         self.state = MafiaGameState.STARTED
         self._game_loop_task = asyncio.create_task(self._game_loop())
@@ -945,16 +946,16 @@ class MafiaGame:
             await self.all_chat.send(msg(messages.SOMETHING_BROKE, error=err))
 
         await self._update_role_listing(show_players=True)
-        await self._goodbye()
+        await self.game_over()
 
-    async def _goodbye(self) -> None:
+    async def game_over(self) -> None:
+        """Delete the guild after waiting for a bit."""
         assert self.guild is not None
         assert self.all_chat is not None
 
-        await self.all_chat.send(msg(messages.GOODBYE, seconds=15))
-        await asyncio.sleep(15.0)
+        await self.all_chat.send(msg(messages.GAME_OVER, seconds=15))
+        await asyncio.sleep(15)
 
-        # bye bye
         await self.guild.delete()
 
         try:

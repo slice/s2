@@ -205,11 +205,9 @@ MAFIA_WIN = "\N{HOCHO} **Mafia win!**"
 TOWNIES_WIN = "\N{DIZZY SYMBOL} **Townies win!**"
 CURRENTLY_ALIVE_MAFIA = "**Alive Mafia:**\n\n{users}"
 CURRENTLY_ALIVE_TOWNIES = "**Alive Townies:**\n\n{users}"
-THANK_YOU = "@everyone: Thanks for playing!"
 
-GOODBYE = (
-    "\N{ALARM CLOCK} Game over! This server will self-destruct in {seconds} seconds."
-)
+THANK_YOU = "@everyone: Thanks for playing!"
+GAME_OVER = "\N{ALARM CLOCK} **Game over!** This server will self-destruct in {seconds} seconds."
 
 FILLING_PROGRESS = (
     "\N{SLEEPING SYMBOL} **Waiting for everyone to join...**\n\n"

@@ -3,10 +3,9 @@
 __all__ = [
     "UserLike",
     "UserLikeSet",
-    "UserLikeSeq",
     "mention_set",
     "basic_command",
-    "select_member",
+    "select_player",
 ]
 
 from typing import Union, Iterable, Optional, Set, TYPE_CHECKING
@@ -21,15 +20,17 @@ UserLike = Union[discord.User, discord.Member]
 UserLikeIterable = Iterable[UserLike]
 
 
-def basic_command(name: str, inp: str) -> Optional[str]:
-    name = name + " "
+def basic_command(name: str, input: str) -> Optional[str]:
+    """Parse a basic command."""
+    name += " "
 
-    if not inp.startswith(name):
+    if not input.startswith(name):
         return None
-    return inp[len(name) :]
+    return input[len(name) :]
 
 
 def select_player(selector: str, players: Set["Player"]) -> Optional["Player"]:
+    """Select a player from a set of players using a selector."""
     direct_match = discord.utils.find(
         lambda player: str(player.member.name).lower() == selector.lower()
         or str(player.member).lower() == selector.lower()

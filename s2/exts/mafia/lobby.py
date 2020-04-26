@@ -1,10 +1,12 @@
+"""Mafia lobby code."""
+
 __all__ = ["LobbyMenu"]
 
 from typing import cast, TYPE_CHECKING
 
 import discord
 import lifesaver
-from discord.ext import menus
+from discord.ext import menus  # type: ignore
 from lifesaver.utils import pluralize
 
 from .formatting import user_listing
@@ -14,6 +16,8 @@ if TYPE_CHECKING:
 
 
 class LobbyMenu(menus.Menu):
+    """A lobby menu for a Mafia game. Drives player joining and game starting."""
+
     JOIN_EMOJI = "\N{RAISED HAND}"
 
     def __init__(self, game: "MafiaGame", minimum_players: int = 4, **kwargs) -> None:
