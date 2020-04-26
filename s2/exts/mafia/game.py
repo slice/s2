@@ -394,7 +394,7 @@ class MafiaGame:
             )
 
             for player in nocturnal:
-                if player.role in handled_grouped_roles:
+                if player.role in handled_grouped_roles or player.dead:
                     continue
                 self.log.info("%s: yielding", player)
                 yield player
@@ -407,10 +407,6 @@ class MafiaGame:
             return None
 
         for player in iter_nocturnal(priority_by="on_night_begin"):
-            if player.dead:
-                # they're dead, so don't even bother handling this
-                self.log.info("%s: skipping begin event, they dead", player)
-                continue
             ctx = RoleActionContext(game=self, player=player)
 
             # persistent memory means that sometimes we pass non-None state to
