@@ -918,14 +918,12 @@ class MafiaGame:
         )
 
         self.state = MafiaGameState.FILLING
-        await self._lock()
         await self._update_filling_message()
         await self._all_players_joined.wait()
 
         assert self._filling_message is not None
         await self._filling_message.delete()
         await self.roster.localize()
-        await self._unlock()
 
         await self._notify_roles()
         await asyncio.sleep(5)
