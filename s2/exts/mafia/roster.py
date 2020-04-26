@@ -48,7 +48,7 @@ class Roster:
         players = players or self.players
         return set(filter(predicate, players))
 
-    def with_role(self, role: Type[role.Role]) -> Set["Player"]:
+    def with_role(self, role: Type["role.Role"]) -> Set["Player"]:
         """Return the set of players with a role."""
         return self._filter_players(lambda player: player.role is role)
 
