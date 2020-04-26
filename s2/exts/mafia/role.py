@@ -243,7 +243,7 @@ class Mafia(PickerRole):
     @classmethod
     def n_players(cls, roster: Roster) -> int:
         """Calculate how much mafia there should be in a game."""
-        return min(math.floor(len(roster.players) / 3), 3)
+        return max(min(math.floor(len(roster.players) / 3), 3), 1)
 
     @classmethod
     def get_targets(cls, ctx: RoleActionContext) -> Set["Player"]:
