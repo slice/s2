@@ -673,7 +673,7 @@ class MafiaGame:
         await self._unlock()
 
         # time to discuss + vote
-        votes_required = math.floor(len(self.roster.alive) / 3)
+        votes_required = max(math.floor(len(self.roster.alive) / 3), 1)
 
         # lengths
         discussion_time = 45
