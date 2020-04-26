@@ -81,6 +81,11 @@ ROLE_GREETINGS = {
         "Hello, **Doctor!** At night, you'll be able to heal someone and "
         "prevent their death if they're attacked."
     ),
+    "Medium": (
+        "Hello, **Medium!** A tnight, you'll be able to talk to the dead! "
+        "However, keep in mind that you can only do this **once per game.** "
+        "Be smart!"
+    ),
 }
 
 PICK_RESPONSE = {
@@ -119,7 +124,18 @@ PICK_PROMPT = {
         "If they aren't attacked, then nothing will happen. "
         "You have 30 seconds!\n\n{targets}"
     ),
+    "Medium": (
+        "If you wish to speak to the dead now, type `!seance`. "
+        "You can only seance once a game, so make it count."
+    ),
 }
+
+MEDIUM_SEANCE_ANNOUNCEMENT = [
+    "A medium, {medium}, has opened a channel of communication!",
+    "Medium {medium} has arrived!",
+]
+MEDIUM_SEANCE = "Beginning the seance..."
+MEDIUM_ALREADY_SEANCED = "You have already used your seance."
 
 GAME_START = [
     "{mentions}: The main game will take place here. Have fun!",

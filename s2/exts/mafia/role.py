@@ -323,7 +323,54 @@ class Investigator(PickerRole):
         await ctx.reply(msg(message))
 
 
-class Medium(PickerRole):
+class Medium(Role[bool]):
     """Able to speak to the dead once a game."""
 
     name = "Medium"
+    key = Key("has_seanced", persistent=True)
+
+    seance_perms = discord.PermissionOverwrite(
+        read_messages=True, read_message_history=False
+    )
+
+    @Role.listener()
+    async def on_message(cls, ctx: RoleActionContext, state: bool) -> bool:
+        assert ctx.message is not None
+
+        if ctx.message.content != "!seance":
+            return state
+
+        if state:
+            await ctx.reply(msg(messages.MEDIUM_ALREADY_SEANCED))
+            return state
+
+        await ctx.reply(msg(messages.MEDIUM_SEANCE))
+
+        assert (spec_chat := ctx.game.spectator_chat) is not None
+
+        await spec_chat.set_permissions(ctx.player.member, overwrite=cls.seance_perms)
+        await spec_chat.send(
+            "@everyone: " + msg(messages.MEDIUM_SEANCE_ANNOUNCEMENT, medium=ctx.player)
+        )
+
+        return True
+
+    @Role.listener()
+    async def on_night_begin(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
+        if state is True:
+            # already seanced
+            return
+
+        await ctx.reply(msg(messages.PICK_PROMPT["Medium"]))
+
+    @Role.listener()
+    async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
+        if not state:
+            return
+
+        assert (spec_chat := ctx.game.spectator_chat) is not None
+
+        if ctx.player.member not in spec_chat.overwrites:
+            return
+
+        await spec_chat.set_permissions(ctx.player.member, overwrite=None)

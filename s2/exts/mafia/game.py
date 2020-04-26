@@ -65,6 +65,7 @@ class MafiaGame:
         role.Innocent: 20,
         role.Investigator: 10,
         role.Doctor: 10,
+        role.Medium: 5,
     }
 
     def __init__(
