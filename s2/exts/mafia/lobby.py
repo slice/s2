@@ -50,6 +50,17 @@ class LobbyMenu(menus.Menu):
     async def _update_embed(self) -> None:
         await self.message.edit(embed=self._embed())
 
+    async def _remove_player(self, member: discord.Member) -> None:
+        try:
+            self.game.participants.remove(member)
+        except KeyError:
+            pass
+        else:
+            if self._still_needed() > 0:
+                await self.remove_button(self.on_start_button, react=True)
+            await self._update_embed()
+        return
+
     async def send_initial_message(self, ctx, channel) -> None:
         content = (
             f"React with {self.JOIN_EMOJI} to join!\n"
@@ -70,12 +81,7 @@ class LobbyMenu(menus.Menu):
                 # creator can't leave the lobby
                 return
 
-            try:
-                self.game.participants.remove(member)
-            except KeyError:
-                pass
-            else:
-                await self._update_embed()
+            await self._remove_player(member)
             return
 
         self.game.participants.add(member)
@@ -85,8 +91,7 @@ class LobbyMenu(menus.Menu):
         if self._still_needed() < 1:
             # add the start button
             await self.add_button(
-                menus.Button("\N{WHITE HEAVY CHECK MARK}", action=self.on_start),
-                react=True,
+                self.on_start_button, react=True,
             )
 
     @menus.button("\N{CROSS MARK}")
@@ -100,6 +105,8 @@ class LobbyMenu(menus.Menu):
         if payload.user_id != self.game.creator.id:
             return
         self.stop()
+
+    on_start_button = menus.Button("\N{WHITE HEAVY CHECK MARK}", action=on_start)
 
     def reaction_check(self, payload: discord.RawReactionActionEvent) -> bool:
         if (member := payload.member) is not None and member.bot:
