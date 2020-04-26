@@ -578,12 +578,18 @@ class MafiaGame:
 
         alive = self.roster.alive_mafia if mafia_won else self.roster.alive_townies
         alive_members = {player.member for player in alive}
-        await self.all_chat.send(
-            msg(header_msg)
-            + "\n\n"
-            + msg(listing_msg, users=user_listing(alive_members))
-        )
-        await self.all_chat.send(msg(messages.THANK_YOU))
+
+        msgs = [
+            msg(header_msg),
+            msg(listing_msg, players=user_listing(alive_members, commas=True)),
+            msg(
+                messages.PLAYER_ROLE_LISTING,
+                players=self.role_listing(show_players=True),
+            ),
+            msg(messages.THANK_YOU),
+        ]
+
+        await self.all_chat.send("\n\n".join(msgs))
 
         await asyncio.sleep(2)
         await self._unlock()

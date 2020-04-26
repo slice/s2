@@ -12,8 +12,12 @@ if TYPE_CHECKING:
 Message = Union[str, List[str]]
 
 
-def user_listing(users: Union["UserLikeIterable", Iterable["Player"]]) -> str:
+def user_listing(
+    users: Union["UserLikeIterable", Iterable["Player"]], *, commas: bool = False
+) -> str:
     """Format a list of users."""
+    if commas:
+        return ", ".join(map(str, users))
     return "\n".join(f"\N{EM DASH} {user}" for user in users)
 
 
