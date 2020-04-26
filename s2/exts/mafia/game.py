@@ -462,7 +462,7 @@ class MafiaGame:
         for player in self.roster.players:
             assert player.channel is not None
             if (greeting := messages.ROLE_GREETINGS.get(player.role.name)) is not None:
-                await player.channel.send(msg(greeting))
+                await player.channel.send(f"{player.mention}: {msg(greeting)}")
 
         mafia_chat = self.role_chats[role.Mafia]
         await mafia_chat.send(
