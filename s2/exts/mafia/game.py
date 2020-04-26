@@ -151,7 +151,7 @@ class MafiaGame:
         self._filling_message: Optional[discord.Message] = None
 
         #: Whether we are handling nocturnal actions or not.
-        self._handling_noctural_actions: bool = False
+        self._handling_nocturnal_actions: bool = False
 
         #: The message showing the list of roles.
         self._role_listing_message: Optional[discord.Message] = None
@@ -202,7 +202,7 @@ class MafiaGame:
         """Handle a message being sent in the guild."""
         await self._handle_always_available_commands(message)
 
-        if self._handling_noctural_actions:
+        if self._handling_nocturnal_actions:
             await self._handle_night_command(message)
 
     async def _all_messages(self) -> AsyncGenerator[discord.Message, None]:
@@ -422,9 +422,9 @@ class MafiaGame:
         # to kill. at the end of the night, the state from these actions will
         # be "carried out".
         self.log.info("handling nocturnal actions")
-        self._handling_noctural_actions = True
+        self._handling_nocturnal_actions = True
         await asyncio.sleep(2 if self.DEBUG else 36)
-        self._handling_noctural_actions = False
+        self._handling_nocturnal_actions = False
 
         # now to carry out what decisions were made during the night...
         for player in iter_nocturnal(priority_by="on_night_end"):
