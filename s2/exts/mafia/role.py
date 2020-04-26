@@ -264,11 +264,11 @@ class Mafia(PickerRole):
         )
 
         if was_healed:
-            await ctx.reply(msg(messages.MAFIA_FAILURE, victim=victim))
+            await ctx.reply(msg(messages.MAFIA_FAILURE, target=victim))
             return
 
         await victim.kill()
-        await ctx.reply(msg(messages.MAFIA_SUCCESS, victim=victim))
+        await ctx.reply(msg(messages.MAFIA_SUCCESS, target=victim))
 
 
 class Doctor(PickerRole):
