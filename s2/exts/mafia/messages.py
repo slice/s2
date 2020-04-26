@@ -208,6 +208,7 @@ CURRENTLY_ALIVE_TOWNIES = "**Alive Townies:**\n\n{users}"
 
 THANK_YOU = "@everyone: Thanks for playing!"
 GAME_OVER = "\N{ALARM CLOCK} **Game over!** This server will self-destruct in {seconds} seconds."
+GAME_OVER_INVITE = "Game over!\n\nPlayers: {participants}"
 
 FILLING_PROGRESS = (
     "\N{SLEEPING SYMBOL} **Waiting for everyone to join...**\n\n"
