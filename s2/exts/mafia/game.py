@@ -579,6 +579,8 @@ class MafiaGame:
         alive = self.roster.alive_mafia if mafia_won else self.roster.alive_townies
         alive_members = {player.member for player in alive}
 
+        await self._update_role_listing(show_players=True)
+
         msgs = [
             msg(header_msg),
             msg(listing_msg, players=user_listing(alive_members, commas=True)),
@@ -952,7 +954,6 @@ class MafiaGame:
             self.log.exception("error during main game loop")
             await self.all_chat.send(msg(messages.SOMETHING_BROKE, error=err))
 
-        await self._update_role_listing(show_players=True)
         await self.game_over()
 
     async def game_over(self) -> None:
