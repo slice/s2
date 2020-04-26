@@ -182,8 +182,8 @@ FOUND_DEAD = [
 ]
 
 GAME_THROWN = (
-    "{mentions}: Unfortunately, {thrower} left the server. The game is unable "
-    "to proceed."
+    "@everyone: Unfortunately, {thrower} left the server. The game is unable "
+    "to proceed!"
 )
 
 THEY_ROLE = "They were **{role}**."

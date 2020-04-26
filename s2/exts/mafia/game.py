@@ -195,14 +195,15 @@ class MafiaGame:
     async def on_member_remove(self, member: discord.Member) -> None:
         """Handle a game member leaving the guild."""
         assert self.roster is not None
-        if member not in self.roster.players:
+
+        if (player := self.roster.get_player(member)) is None:
             return
 
         if self.thrown:
             return
 
         self.thrown = True
-        await self._throw(member)
+        await self.throw(player)
 
     async def on_message(self, message: discord.Message) -> None:
         """Handle a message being sent in the guild."""
@@ -238,21 +239,17 @@ class MafiaGame:
         while True:
             yield await self.bot.wait_for("message", check=check)
 
-    async def _throw(self, thrower) -> None:
+    async def throw(self, thrower: Player) -> None:
         assert self.all_chat is not None
 
-        # cancel game from proceeding any further
-        if self._game_loop_task is not None:
-            self._game_loop_task.cancel()
-
         await self._unlock()
-        await self.all_chat.send(
-            msg(messages.GAME_THROWN, mentions="@everyone", thrower=thrower)
-        )
+        await self.all_chat.send(msg(messages.GAME_THROWN, thrower=thrower))
 
-        if self._game_loop_task is None:
-            # game hasn't even started yet...!
+        if (task := self._game_loop_task) is None:
+            # the game hasn't even started yet
             await self.game_over()
+        else:
+            task.cancel()
 
     async def gather_participants(self) -> bool:
         """Interactively gather game participants."""
