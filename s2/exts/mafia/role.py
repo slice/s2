@@ -260,7 +260,7 @@ class Mafia(PickerRole):
         was_healed = any(
             value == victim
             for (key, value) in ctx.game.memory.items()
-            if isinstance(key, str) and key.key.startswith("heal_target_")
+            if key.key.startswith("heal_target_")
         )
 
         if was_healed:
