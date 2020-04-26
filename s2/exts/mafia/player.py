@@ -56,6 +56,10 @@ class Player:
         """Kill the player."""
         self.alive = False
 
+        if (channel := self.channel) is not None:
+            embed = discord.Embed(title="You died!", color=discord.Color.red())
+            await channel.send(content=self.mention, embed=embed)
+
         if self.mafia:
             # prevent speaking in mafia chat
             mafia_chat = self._game.role_chats[Mafia]
