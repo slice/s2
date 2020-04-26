@@ -73,7 +73,7 @@ class MafiaGame:
         bot,
         *,
         creator: discord.Member,
-        lobby_channel: discord.TextChannel,
+        lobby_channel: discord.TextChannel = None,
         ctx: lifesaver.Context,
     ):
         self.bot = bot
@@ -93,7 +93,7 @@ class MafiaGame:
         self.creator = creator
 
         #: The channel that the lobby was created in.
-        self.lobby_channel = lobby_channel
+        self.lobby_channel = lobby_channel or ctx.channel
 
         #: The invitation message in the lobby.
         self.invite_message: Optional[discord.Message] = None
