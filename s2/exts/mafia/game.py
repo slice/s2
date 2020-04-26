@@ -152,6 +152,9 @@ class MafiaGame:
         #: Whether we are handling nocturnal actions or not.
         self._handling_noctural_actions: bool = False
 
+        #: The message showing the list of roles.
+        self._role_listing_message: Optional[discord.Message] = None
+
     #: Debugging mode. Shortens some wait times.
     DEBUG = False
 
@@ -665,6 +668,7 @@ class MafiaGame:
             await asyncio.sleep(3.0)
             await self._display_will(victim)
             await self.all_chat.send(embed=self._role_reveal(victim, pronoun=True))
+            await self._update_role_listing()
             await asyncio.sleep(5.0)
 
         # someone has died, check if the game can end now
@@ -719,6 +723,7 @@ class MafiaGame:
 
             await asyncio.sleep(3)
             await self.all_chat.send(embed=self._role_reveal(hanged))
+            await self._update_role_listing()
             await asyncio.sleep(5)
 
             await self._check_game_over()
@@ -788,6 +793,41 @@ class MafiaGame:
             self._filling_message = await self.all_chat.send(text)
         else:
             await self._filling_message.edit(content=text)
+
+    def role_listing(self, *, show_players: bool = False) -> str:
+        """Generate a listing of all roles in the game.
+
+        You may also optionally show players' names adjacent to their roles.
+        """
+        assert self.roster is not None
+
+        def _format_player(player: Player) -> str:
+            named_entity = (
+                f"{player}: {player.role.name}" if show_players else player.role.name
+            )
+
+            line = "\N{EM DASH} " + named_entity
+
+            if player.dead:
+                return f"~~{line}~~"
+            return line
+
+        sorted_players = sorted(
+            self.roster.players, key=lambda player: player.role.name
+        )
+        return "\n".join(map(_format_player, sorted_players))
+
+    async def _update_role_listing(self, *, show_players: bool = False) -> None:
+        assert self.all_chat is not None
+
+        header = "Players" if show_players else "Roles"
+        listing = header + ":\n\n" + self.role_listing(show_players=show_players)
+
+        if self._role_listing_message is None:
+            self._role_listing_message = await self.all_chat.send(listing)
+            await self._role_listing_message.pin()
+        else:
+            await self._role_listing_message.edit(content=listing)
 
     async def _setup_players_and_roster(self) -> None:
         assert self.guild is not None
@@ -868,6 +908,7 @@ class MafiaGame:
 
         await self._setup_players_and_roster()
         assert self.roster is not None
+        await self._update_role_listing()
 
         invite = await self.all_chat.create_invite()
         self.invite_message = await self.lobby_channel.send(
@@ -903,6 +944,7 @@ class MafiaGame:
             self.log.exception("error during main game loop")
             await self.all_chat.send(msg(messages.SOMETHING_BROKE, error=err))
 
+        await self._update_role_listing(show_players=True)
         await self._goodbye()
 
     async def _goodbye(self) -> None:
