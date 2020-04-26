@@ -37,6 +37,9 @@ class LobbyMenu(menus.Menu):
         if (still_needed := self._still_needed()) > 0:
             players = pluralize(player=still_needed, with_indicative=True)
             embed.set_footer(text=f"{players} still needed")
+        else:
+            players = pluralize(player=len(self.game.participants))
+            embed.set_footer(text=players)
 
         return embed
 
