@@ -82,7 +82,7 @@ ROLE_GREETINGS = {
         "prevent their death if they're attacked."
     ),
     "Medium": (
-        "Hello, **Medium!** A tnight, you'll be able to talk to the dead! "
+        "Hello, **Medium!** At night, you'll be able to talk to the dead! "
         "However, keep in mind that you can only do this **once per game.** "
         "Be smart!"
     ),
