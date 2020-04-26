@@ -784,7 +784,7 @@ class MafiaGame:
         assert self.all_chat is not None
         assert self.roster is not None
 
-        not_joined = self.roster.players - set(self.guild.members)
+        not_joined = self.participants - set(self.guild.members)
         text = msg(messages.FILLING_PROGRESS, waiting_on=user_listing(not_joined))
 
         if self._filling_message is None:
