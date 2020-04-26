@@ -209,7 +209,7 @@ class Mafia(lifesaver.Cog):
 {game.creator=}
 
 {game.role_chats=!r}
-{game.role_state=!r}
+{game.memory=!r}
 
 {players}
 """

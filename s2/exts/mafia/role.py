@@ -21,6 +21,7 @@ from . import messages
 from .roster import Roster
 from .formatting import user_listing, msg, Message
 from .utils import select_player, basic_command
+from .memory import Key
 
 if TYPE_CHECKING:
     from .player import Player
@@ -111,8 +112,16 @@ class Role(abc.ABC, Generic[S]):
     #: mafia themselves.
     evil: bool = False
 
-    #: The state key to use for this role.
-    state_key: Optional[str] = None
+    #: The memory key to use for this role.
+    key: Optional[Key] = None
+
+    @classmethod
+    def localized_key(cls, player: "Player") -> Optional[Key]:
+        """Compute the key, localized if necessary."""
+        if (key := cls.key) is None:
+            return None
+
+        return key if player.role.grouped else key.localized(str(player.id))
 
     @classmethod
     def grouped_chat(cls, game: "MafiaGame") -> Optional[discord.TextChannel]:
@@ -139,23 +148,23 @@ class Role(abc.ABC, Generic[S]):
 
         return decorator
 
-    @listener()
+    @classmethod
     async def on_message(
         cls, ctx: RoleActionContext, state: Optional[S]
     ) -> Optional[S]:
         """Handle messages sent in the player's personal channel."""
 
-    @listener()
-    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
+    @classmethod
+    async def on_night_begin(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         """Handle the night's beginning."""
 
-    @listener()
+    @classmethod
     async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         """Handle the night's end."""
 
 
 class PickerRole(Role[Optional["Player"]]):
-    """A role that picks someone at night.
+    """A role that non-persistently picks someone at night.
 
     What is done when the night ends is up to the inheriting class.
     """
@@ -183,7 +192,7 @@ class PickerRole(Role[Optional["Player"]]):
         return ctx.roster.alive - {ctx.player}
 
     @Role.listener()
-    async def on_night_begin(cls, ctx: RoleActionContext) -> None:
+    async def on_night_begin(cls, ctx: RoleActionContext, state: None) -> None:
         if not cls.should_allow_picking(ctx):
             return
 
@@ -228,7 +237,7 @@ class Mafia(PickerRole):
     guaranteed = True
 
     pick_command = "!kill"
-    state_key = "mafia_victim"
+    key = Key("mafia_victim")
 
     @classmethod
     def n_players(cls, roster: Roster) -> int:
@@ -246,12 +255,12 @@ class Mafia(PickerRole):
         if victim is None:
             return
 
-        ctx.game.memory[f"attacked_{victim.id}"] = True
+        ctx.game.memory[Key("attacked").localized(victim)] = True
 
         was_healed = any(
             value == victim
             for (key, value) in ctx.game.memory.items()
-            if isinstance(key, str) and key.startswith("heal_target_")
+            if isinstance(key, str) and key.key.startswith("heal_target_")
         )
 
         if was_healed:
@@ -268,7 +277,7 @@ class Doctor(PickerRole):
     name = "Doctor"
 
     pick_command = "!heal"
-    state_key = "heal_target"
+    key = Key("heal_target")
 
     # only notify the player after end events have already taken place, so we
     # know if they got attacked or not
@@ -296,7 +305,7 @@ class Investigator(PickerRole):
     name = "Investigator"
 
     pick_command = "!visit"
-    state_key = "investigator_target"
+    key = Key("investigator_target")
 
     @Role.listener()
     async def on_night_end(

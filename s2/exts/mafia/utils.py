@@ -21,19 +21,6 @@ UserLike = Union[discord.User, discord.Member]
 UserLikeIterable = Iterable[UserLike]
 
 
-def resolve_state_key(player: "Player") -> Optional[str]:
-    """Resolve a state key for a player. If there's no state key, None is returned."""
-    if (state_key := player.role.state_key) is None:
-        return None
-
-    if player.role.grouped:
-        # since the player is in a grouped role, use the same state key for
-        # everyone in the group
-        return state_key
-    else:
-        return state_key + f"_{player.member.id}"
-
-
 def basic_command(name: str, inp: str) -> Optional[str]:
     name = name + " "
 
