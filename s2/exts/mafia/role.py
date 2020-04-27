@@ -289,7 +289,7 @@ class Doctor(PickerRole):
         if not target:
             return
 
-        was_attacked = f"attacked_{target.id}" in ctx.game.memory
+        was_attacked = Key("attacked").localized(target) in ctx.game.memory
         message_key = "healed" if was_attacked else "noop"
         await ctx.send(msg(messages.DOCTOR_RESULT[message_key], target=target))
 
