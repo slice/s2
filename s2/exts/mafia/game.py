@@ -716,6 +716,11 @@ class MafiaGame:
             chosen_role: Type[Role] = random.choices(wr_roles, weights=wr_weights)[0]
             townie.role = chosen_role
 
+        if all(townie.role is role.Innocent for townie in roster.townies):
+            # all are innocent, oh no! force an investigator
+            lucky_townie = random.choice(list(roster.townies))
+            lucky_townie.role = role.Investigator
+
         self.log.info("assigned roles: %r", roster)
 
         # create personal channels for everyone
