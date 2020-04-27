@@ -290,6 +290,12 @@ class Doctor(PickerRole):
             return
 
         was_attacked = Key("attacked").localized(target) in ctx.game.memory
+        if was_attacked:
+            assert target.channel is not None
+            await target.channel.send(
+                f"{target.mention}: " + msg(messages.DOCTOR_YOU_WERE_SAVED)
+            )
+
         message_key = "healed" if was_attacked else "noop"
         await ctx.send(msg(messages.DOCTOR_RESULT[message_key], target=target))
 

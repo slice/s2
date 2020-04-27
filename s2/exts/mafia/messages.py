@@ -37,6 +37,10 @@ MAFIA_SUCCESS = [
     "**{target}**, R.I.P.",
 ]
 
+DOCTOR_YOU_WERE_SAVED = [
+    "Your life was saved by a doctor!",
+    "A doctor saved your life!",
+]
 DOCTOR_RESULT = {
     "healed": [
         "You have saved {target}'s life!",
