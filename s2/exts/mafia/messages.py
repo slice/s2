@@ -159,7 +159,7 @@ DISCUSSION_TIME_ANNOUNCEMENT = [
 ]
 
 VOTING_TIME_ANNOUNCEMENT = (
-    "Alive town members can now vote who to put on trial. "
+    "Town members can now vote who to put on trial. "
     "To vote, type `!vote <username>` in chat. "
     "You all have 90 seconds, and {votes} are needed to accuse someone.\n\n"
     "**Players:**\n\n{players}"
