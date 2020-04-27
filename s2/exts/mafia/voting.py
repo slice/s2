@@ -325,7 +325,7 @@ class Voting:
 
     async def judge(self, suspect: "Player") -> Tuple[int, int]:
         async with Spotlight(self.game, suspect):
-            await self.all_chat.send(msg(messages.PUT_ON_TRIAL, player=suspect))
+            await self.all_chat.send(msg(messages.PUT_ON_TRIAL, player=suspect.mention))
             await asyncio.sleep(self.defense_time)
 
         voters = self.roster.alive - {suspect}
