@@ -397,7 +397,7 @@ class Voting:
         trials = 0
 
         # only perform three trials at most
-        while trials < 4:
+        while trials < 3:
             suspect = await self.trial_voting()
 
             if not suspect:
