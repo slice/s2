@@ -59,10 +59,13 @@ DOCTOR_RESULT = {
 INVESTIGATOR_RESULT_SUSPICIOUS = [
     "You find that your target has a knife collection.",
     "You find that the suspect is making a lot of noise.",
-    "You find that the suspect's garage is leaking red fluid.",
+    "You find that the suspect's garage is leaking red liquid.",
     "You find that your target has a shed full of weapons.",
     "You find that your target has a collection of voodoo dolls.",
     "You find strange liquids oozing from your suspect's dumpster.",
+    "You discover a bear trap in your suspect's front lawn.",
+    "You discover numerous red stains near your suspect's house.",
+    "You hear ominous laughter from your suspect's house.",
 ]
 
 INVESTIGATOR_RESULT_CLEAN = [
