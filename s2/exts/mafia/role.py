@@ -363,6 +363,10 @@ class Medium(Role[bool]):
             # already seanced
             return
 
+        if not ctx.roster.dead:
+            # no dead
+            return
+
         await ctx.reply(msg(messages.PICK_PROMPT["Medium"]))
 
     @Role.listener()
