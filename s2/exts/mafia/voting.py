@@ -407,6 +407,9 @@ class Voting:
                     )
                 await asyncio.sleep(5)
 
+            self.trial_votes = Votes()
+            self.judgement_votes = {}
+
             trials += 1
 
         await self.all_chat.send(msg(messages.VOTING_TIME_TOO_MANY_TRIALS))
