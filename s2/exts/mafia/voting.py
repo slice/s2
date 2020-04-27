@@ -346,11 +346,24 @@ class Voting:
         guilty_votes = self.tally_judgement_votes(Judgement.GUILTY)
         innocent_votes = self.tally_judgement_votes(Judgement.INNOCENT)
 
-        vote_summary = (
-            "\n".join(
-                f"{player} voted **{judgement}**."
-                for player, judgement in self.judgement_votes.items()
+        def _format_judgement_vote(item: Tuple["Player", Judgement]) -> str:
+            player, judgement = item
+            emoji = {
+                Judgement.ABSTAINED: "\N{MEDIUM WHITE CIRCLE}",
+                Judgement.GUILTY: "\N{LARGE RED CIRCLE}",
+                Judgement.INNOCENT: "\N{LARGE GREEN CIRCLE}",
+            }[judgement]
+
+            line = (
+                f"{player} **abstained**."
+                if judgement is Judgement.ABSTAINED
+                else f"{player} voted **{judgement}**."
             )
+
+            return f"{emoji} {line}"
+
+        vote_summary = (
+            "\n".join(map(_format_judgement_vote, self.judgement_votes.items()))
             + "\n\n"
             + f"Guilty: {guilty_votes}\nInnocent: {innocent_votes}"
         )
