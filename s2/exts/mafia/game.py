@@ -56,7 +56,7 @@ class MafiaGame:
     """A class representing a game of mafia."""
 
     WEIGHTED_ROLES: Dict[Type[Role], int] = {
-        role.Innocent: 20,
+        role.Innocent: 10,
         role.Investigator: 10,
         role.Doctor: 10,
         role.Medium: 5,
