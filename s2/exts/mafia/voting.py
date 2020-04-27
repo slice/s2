@@ -310,9 +310,9 @@ class Voting:
             return
 
         public_message = (
-            messages.JUDGEMENT_VOTE_CHANGE
-            if self.judgement_votes[player] is not vote
-            else messages.JUDGEMENT_VOTE_PUBLIC
+            messages.JUDGEMENT_VOTE_PUBLIC
+            if self.judgement_votes[player] is Judgement.ABSTAINED
+            else messages.JUDGEMENT_VOTE_PUBLIC_CHANGE
         )
 
         self.judgement_votes[player] = vote

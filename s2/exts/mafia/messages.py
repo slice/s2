@@ -176,7 +176,7 @@ JUDGEMENT_PROMPT = (
     "You don't have to vote if you don't want to."
 )
 JUDGEMENT_VOTE_PUBLIC = "**{player}** has voted."
-JUDGEMENT_VOTE_CHANGE = "**{player}** has changed their vote."
+JUDGEMENT_VOTE_PUBLIC_CHANGE = "**{player}** has changed their vote."
 JUDGEMENT_VOTE = [
     "Voted **{judgement}**.",
     "Voted **{judgement}**. Were you right?",
