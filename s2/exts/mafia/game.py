@@ -815,9 +815,9 @@ class MafiaGame:
 
         try:
             assert self.invite_message is not None
-            participants = ", ".join(str(member) for member in self.participants)
+            listing = self.role_listing(show_players=True)
             await self.invite_message.edit(
-                content=msg(messages.GAME_OVER_INVITE, participants=participants)
+                content=msg(messages.GAME_OVER_INVITE, players=listing)
             )
         except discord.HTTPException:
             pass
