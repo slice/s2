@@ -289,6 +289,10 @@ class Voting:
             # tie
             return None
 
+        if highest_votes < self.trial_votes_required():
+            # not enough votes
+            return None
+
         return highest_target
 
     # }}}
