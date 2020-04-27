@@ -32,12 +32,10 @@ class Key:
     def __hash__(self) -> int:
         return hash((self.key, self.persistent))
 
-    def __eq__(self, other) -> bool:
-        return (
-            isinstance(other, Key)
-            and self.key == other.key
-            and self.persistent == other.persistent
-        )
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Key):
+            return NotImplemented
+        return self.key == other.key and self.persistent == other.persistent
 
     def __str__(self) -> str:
         return self.key

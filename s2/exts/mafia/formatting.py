@@ -1,7 +1,7 @@
 __all__ = ["user_listing", "msg", "Message"]
 
 import random
-from typing import Union, List, Iterable, TYPE_CHECKING
+from typing import Any, Union, List, Iterable, TYPE_CHECKING
 
 import discord
 
@@ -21,11 +21,11 @@ def user_listing(
     return "\n".join(f"\N{EM DASH} {user}" for user in users)
 
 
-def msg(message: Message, *args, **kwargs) -> str:
+def msg(message: Message, **kwargs: Any) -> str:
     """Process a message, randomly choosing from it if it's a ``list``."""
     if isinstance(message, list):
         message = random.choice(message)
-    return message.format(*args, **kwargs)
+    return message.format(**kwargs)
 
 
 def mention_set(entities: Union["UserLikeIterable", Iterable["Player"]]) -> str:

@@ -3,7 +3,7 @@
 __all__ = ["Roster"]
 
 import random
-from typing import Callable, Set, Union, Optional, TYPE_CHECKING, Type
+from typing import Callable, Set, Union, Optional, TYPE_CHECKING
 
 import discord
 
@@ -12,6 +12,7 @@ from .utils import UserLike
 
 if TYPE_CHECKING:
     from .player import Player
+    from .role import AnyRoleType
     from .game import MafiaGame
 
 
@@ -43,12 +44,14 @@ class Roster:
             player.member = localized_member
 
     def _filter_players(
-        self, predicate: Callable[["Player"], bool], players: Set["Player"] = None
+        self,
+        predicate: Callable[["Player"], bool],
+        players: Optional[Set["Player"]] = None,
     ) -> Set["Player"]:
         players = players or self.players
         return set(filter(predicate, players))
 
-    def with_role(self, role: Type["role.Role"]) -> Set["Player"]:
+    def with_role(self, role: "AnyRoleType") -> Set["Player"]:
         """Return the set of players with a role."""
         return self._filter_players(lambda player: player.role is role)
 

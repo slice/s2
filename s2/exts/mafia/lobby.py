@@ -2,12 +2,12 @@
 
 __all__ = ["LobbyMenu"]
 
-from typing import cast, TYPE_CHECKING
+from typing import Any, cast, TYPE_CHECKING
 
 import discord
 import lifesaver
 from discord.ext import menus  # type: ignore
-from lifesaver.utils import pluralize
+from lifesaver.utils.formatting import pluralize
 
 from .formatting import user_listing
 
@@ -15,12 +15,14 @@ if TYPE_CHECKING:
     from .game import MafiaGame
 
 
-class LobbyMenu(menus.Menu):
+class LobbyMenu(menus.Menu):  # type: ignore
     """A lobby menu for a Mafia game. Drives player joining and game starting."""
 
     JOIN_EMOJI = "\N{RAISED HAND}"
 
-    def __init__(self, game: "MafiaGame", minimum_players: int = 4, **kwargs) -> None:
+    def __init__(
+        self, game: "MafiaGame", minimum_players: int = 4, **kwargs: Any
+    ) -> None:
         super().__init__(timeout=None, **kwargs)
         self.game = game
         self.minimum_players = minimum_players
@@ -61,7 +63,9 @@ class LobbyMenu(menus.Menu):
             await self._update_embed()
         return
 
-    async def send_initial_message(self, ctx, channel) -> None:
+    async def send_initial_message(
+        self, ctx: lifesaver.Context, channel: discord.abc.Messageable
+    ) -> discord.Message:
         content = (
             f"React with {self.JOIN_EMOJI} to join!\n"
             "If you don't know how to play Mafia, type "

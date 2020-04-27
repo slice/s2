@@ -1,18 +1,28 @@
 import fractions
-from typing import Any, Dict, Optional, Union, cast
+from typing import (
+    Coroutine,
+    Callable,
+    Any,
+    Dict,
+    Optional,
+    Union,
+    cast,
+)
 
 import discord
 from discord.ext import commands
 
 import lifesaver
-from lifesaver.utils import Table, codeblock
+from lifesaver.utils.formatting import Table, codeblock
 
 from .game import MafiaGame
 
+Listener = Callable[..., Coroutine[Any, Any, None]]
+
 
 class Mafia(lifesaver.Cog):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, bot: lifesaver.Bot) -> None:
+        super().__init__(bot)
         self.sessions: Dict[int, MafiaGame] = {}
 
     def get_game(
@@ -32,7 +42,7 @@ class Mafia(lifesaver.Cog):
         return game
 
     async def dispatch_to_game(
-        self, event: str, guild: discord.Guild, *args, **kwargs
+        self, event: str, guild: discord.Guild, *args: Any
     ) -> None:
         """Dispatch an event for a game."""
 
@@ -42,13 +52,13 @@ class Mafia(lifesaver.Cog):
         event_handler = getattr(game, event)
 
         try:
-            await event_handler(*args, **kwargs)
+            await event_handler(*args)
         except Exception:
             self.log.exception(
                 "something went wrong while passing %s to a mafia game", event
             )
 
-    def _passthrough_event(event: str):  # type: ignore
+    def _passthrough_event(event: str) -> Listener:  # type: ignore[misc]
         """Generate an event handler that passes events through to mafia games.
 
         We determine the target game through the ``guild`` property of the first
@@ -57,11 +67,11 @@ class Mafia(lifesaver.Cog):
         """
 
         @lifesaver.Cog.listener(event)
-        async def generated_event(self, entity: Any, *args, **kwargs):
+        async def generated_event(self: "Mafia", entity: Any, *args: Any) -> None:
             if (guild := entity.guild) is None:
                 return
 
-            await self.dispatch_to_game(event, guild, entity, *args, **kwargs)
+            await self.dispatch_to_game(event, guild, entity, *args)
 
         generated_event.__name__ = event
 
@@ -273,5 +283,5 @@ class Mafia(lifesaver.Cog):
         await ctx.ok()
 
 
-def setup(bot):
+def setup(bot: lifesaver.Bot) -> None:
     bot.add_cog(Mafia(bot))

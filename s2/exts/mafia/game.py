@@ -8,6 +8,8 @@ import enum
 import logging
 import random
 from typing import (
+    cast,
+    Any,
     AsyncGenerator,
     Dict,
     Optional,
@@ -18,15 +20,15 @@ from typing import (
 )
 
 import discord
-from discord.http import Route
+from discord.http import HTTPClient, Route
 import lifesaver
-from lifesaver.utils import codeblock
+from lifesaver.utils.formatting import codeblock
 
 from . import messages
 from . import role
 from .permissions import ALLOW, BLOCK, HUSH, HUSH_PERMS, NEUTRAL_HUSH_PERMS
 from .player import Player
-from .role import Role, RoleActionContext
+from .role import AnyRoleType, Role, RoleActionContext
 from .roster import Roster
 from .lobby import LobbyMenu
 from .memory import Memory, Key
@@ -55,7 +57,7 @@ class EndGame(RuntimeError):
 class MafiaGame:
     """A class representing a game of mafia."""
 
-    WEIGHTED_ROLES: Dict[Type[Role], int] = {
+    WEIGHTED_ROLES: Dict[AnyRoleType, int] = {
         role.Innocent: 10,
         role.Investigator: 10,
         role.Doctor: 10,
@@ -64,10 +66,10 @@ class MafiaGame:
 
     def __init__(
         self,
-        bot,
+        bot: lifesaver.Bot,
         *,
         creator: discord.Member,
-        lobby_channel: discord.TextChannel = None,
+        lobby_channel: Optional[discord.TextChannel] = None,
         ctx: lifesaver.Context,
     ):
         self.bot = bot
@@ -98,7 +100,7 @@ class MafiaGame:
         self.all_chat: Optional[discord.TextChannel] = None
 
         #: The dictionary of grouped role chats for each role in the game.
-        self.role_chats: Dict[Type[Role], discord.TextChannel] = {}
+        self.role_chats: Dict[AnyRoleType, discord.TextChannel] = {}
 
         #: The dictionary of personal chats for each player in the game.
         self.personal_chats: Dict[Player, discord.TextChannel] = {}
@@ -135,7 +137,7 @@ class MafiaGame:
         self.thrown = False
 
         #: The game loop.
-        self._game_loop_task: Optional[asyncio.Task] = None
+        self._game_loop_task: Optional[asyncio.Task[None]] = None
 
         #: An event that is set when all players have joined the game guild.
         self._all_players_joined = asyncio.Event()
@@ -258,7 +260,8 @@ class MafiaGame:
             raise RuntimeError("failed to create guild") from err
 
         # set default notifications to mentions only
-        await self.bot.http.request(
+        http = self.bot.http  # type: ignore
+        await cast(HTTPClient, http).request(
             Route("PATCH", "/guilds/{guild_id}", guild_id=guild.id),
             json={"default_message_notifications": 1},
         )
@@ -286,7 +289,7 @@ class MafiaGame:
 
         # refresh cache
         await asyncio.sleep(1)
-        guild = self.guild = self.bot.get_guild(guild.id)
+        guild = self.guild = cast(discord.Guild, self.bot.get_guild(guild.id))
 
         # rename the default category just for fun
         first_category = guild.categories[0]
@@ -366,7 +369,7 @@ class MafiaGame:
             prev_state = self.memory.get(key)
 
         ctx = RoleActionContext(game=self, player=player, message=message)
-        new_state = await player.role.on_message(ctx, prev_state)  # type: ignore
+        new_state = await player.role.on_message(ctx, prev_state)
 
         # update role state from on_message if the state has changed
         if key is not None and new_state != prev_state:
@@ -389,7 +392,7 @@ class MafiaGame:
 
             # for players in grouped roles, only handle one player per grouped
             # role. this makes the event handlers only trigger once a night.
-            handled_grouped_roles: Set[Type[Role]] = set()
+            handled_grouped_roles: Set[AnyRoleType] = set()
 
             nocturnal = sorted(
                 self.roster.nocturnal,
@@ -405,7 +408,7 @@ class MafiaGame:
                 if player.role.grouped:
                     handled_grouped_roles.add(player.role)
 
-        def get_state():
+        def get_state() -> Optional[Any]:
             if (key := player.role.localized_key(player)) is not None:
                 return self.memory.get(key)
             return None
@@ -420,7 +423,7 @@ class MafiaGame:
             self.log.info(
                 "on_night_begin: %s (%s), state=%r", player, player.role.name, state
             )
-            await player.role.on_night_begin(ctx, state)  # type: ignore
+            await player.role.on_night_begin(ctx, state)
 
         # handle actions from nocturnal players, such as the mafia choosing who
         # to kill. at the end of the night, the state from these actions will
@@ -439,15 +442,18 @@ class MafiaGame:
             self.log.info(
                 "on_night_end: %s (%s), state=%r", player, player.role.name, state
             )
-            await player.role.on_night_end(ctx, state)  # type: ignore
+            await player.role.on_night_end(ctx, state)
 
         await asyncio.sleep(3)
 
         # unlock during day instead, after the death has been announced
         # await self._unlock()
 
-    async def alltalk(self):
+    async def alltalk(self) -> None:
         """Allow all game participants to speak in the main game channel."""
+        assert self.all_chat is not None
+        assert self.dead_role is not None
+        assert self.spectator_role is not None
         await self.all_chat.set_permissions(self.dead_role, **NEUTRAL_HUSH_PERMS)
         await self.all_chat.set_permissions(self.spectator_role, **NEUTRAL_HUSH_PERMS)
 
@@ -531,7 +537,7 @@ class MafiaGame:
         await asyncio.sleep(10)
 
     async def _display_will(
-        self, player: Player, channel: discord.TextChannel = None
+        self, player: Player, channel: Optional[discord.TextChannel] = None
     ) -> None:
         if player.will is None:
             return
@@ -721,7 +727,9 @@ class MafiaGame:
         wr_weights = list(self.WEIGHTED_ROLES.values())
 
         for townie in roster.townies:
-            chosen_role: Type[Role] = random.choices(wr_roles, weights=wr_weights)[0]
+            chosen_role: Type[Role[Any]] = random.choices(wr_roles, weights=wr_weights)[
+                0
+            ]
             townie.role = chosen_role
 
         if all(townie.role is role.Innocent for townie in roster.townies):

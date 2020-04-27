@@ -5,6 +5,7 @@ import enum
 import collections
 import math
 from typing import (
+    Any,
     Dict,
     Callable,
     Awaitable,
@@ -18,7 +19,7 @@ from typing import (
 )
 
 import discord
-from lifesaver.utils import pluralize
+from lifesaver.utils.formatting import pluralize
 
 from . import messages
 from .utils import basic_command, select_player
@@ -27,6 +28,7 @@ from .formatting import Message, msg, user_listing
 if TYPE_CHECKING:
     from .player import Player
     from .game import MafiaGame
+    from .roster import Roster
 
 VT = TypeVar("VT")
 VR = TypeVar("VR")
@@ -38,17 +40,17 @@ class Judgement(enum.Enum):
     ABSTAINED = enum.auto()
 
     def __str__(self) -> str:
-        if self is self.GUILTY:
+        if self is self.GUILTY:  # type: ignore
             return "guilty"
-        elif self is self.INNOCENT:
+        elif self is self.INNOCENT:  # type: ignore
             return "innocent"
-        elif self is self.ABSTAINED:
+        elif self is self.ABSTAINED:  # type: ignore
             return "abstained"
         return "...?"
 
 
 class Votes(Generic[VR, VT]):
-    def __init__(self):
+    def __init__(self) -> None:
         self.votes: DefaultDict[VT, List[VR]] = collections.defaultdict(list)
 
     def tallied(self) -> Dict[VT, int]:
@@ -116,7 +118,7 @@ class Spotlight:
         await self.game.all_chat.set_permissions(self.player.member, send_messages=True)
         await self.game._lock()
 
-    async def __aexit__(self, *args) -> None:
+    async def __aexit__(self, *args: Any) -> None:
         assert self.game.all_chat is not None
         await self.game.all_chat.set_permissions(self.player.member, overwrite=None)
         await self.game._unlock()
@@ -137,12 +139,12 @@ class Voting:
     # properties {{{
 
     @property
-    def all_chat(self):
+    def all_chat(self) -> discord.TextChannel:
         assert (all_chat := self.game.all_chat) is not None
         return all_chat
 
     @property
-    def roster(self):
+    def roster(self) -> "Roster":
         assert (roster := self.game.roster) is not None
         return roster
 

@@ -2,8 +2,7 @@
 
 __all__ = [
     "UserLike",
-    "UserLikeSet",
-    "mention_set",
+    "UserLikeIterable",
     "basic_command",
     "select_player",
 ]
@@ -43,6 +42,7 @@ def select_player(selector: str, players: Set["Player"]) -> Optional["Player"]:
         return direct_match
 
     mapping = {player.id: player.member.name for player in players}
+    selected_id: int
     _, score, selected_id = fw_process.extractOne(selector, mapping)
 
     if score > 50:  # arbitrary threshold

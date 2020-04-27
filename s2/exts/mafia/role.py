@@ -1,6 +1,7 @@
 """Mafia game roles."""
 
 __all__ = [
+    "AnyRoleType",
     "Role",
     "RoleActionContext",
     "Mafia",
@@ -12,9 +13,8 @@ __all__ = [
 
 import abc
 import asyncio
-import functools
 import math
-from typing import Generic, TypeVar, Optional, Set, TYPE_CHECKING
+from typing import Type, Any, Callable, Generic, TypeVar, Optional, Set, TYPE_CHECKING
 
 import discord
 
@@ -28,19 +28,30 @@ if TYPE_CHECKING:
     from .player import Player
     from .game import MafiaGame
 
+T = TypeVar("T")
 S = TypeVar("S")
+
+AnyRoleType = Type["Role[Any]"]
 
 
 class RoleActionContext:
-    def __init__(self, **kwargs) -> None:
-        self.game: "MafiaGame" = kwargs.pop("game")
-        self.player: "Player" = kwargs.pop("player")
-        self.message: Optional[discord.Message] = kwargs.get("message")
+    def __init__(
+        self,
+        *,
+        game: "MafiaGame",
+        player: "Player",
+        message: Optional[discord.Message] = None,
+    ) -> None:
+        self.game = game
+        self.player = player
+        self.message = message
 
-    async def send(self, *args, **kwargs) -> discord.Message:
+    async def send(
+        self, content: str, *, embed: Optional[discord.Embed] = None
+    ) -> discord.Message:
         """Send a message to the role channel."""
         target = self.group_channel if self.player.role.grouped else self.channel
-        return await target.send(*args, **kwargs)
+        return await target.send(content, embed=embed)
 
     async def reply(self, content: str) -> discord.Message:
         """Reply to the message."""
@@ -136,16 +147,14 @@ class Role(abc.ABC, Generic[S]):
         return 1
 
     @staticmethod
-    def listener(*, priority: int = 0):
+    def listener(
+        *, priority: int = 0
+    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
         """A decorator that listens for events."""
 
-        def decorator(func):
-            @functools.wraps(func)
-            async def _handler(*args, **kwargs):
-                return await func(*args, **kwargs)
-
-            _handler._listener_priority = priority
-            return classmethod(_handler)
+        def decorator(func: Callable[..., T]) -> Callable[..., T]:
+            func._listener_priority = priority  # type: ignore[attr-defined]
+            return func
 
         return decorator
 
@@ -193,6 +202,7 @@ class PickerRole(Role[Optional["Player"]]):
         return ctx.roster.alive - {ctx.player}
 
     @Role.listener()
+    @classmethod
     async def on_night_begin(cls, ctx: RoleActionContext, state: None) -> None:
         if not cls.should_allow_picking(ctx):
             return
@@ -202,6 +212,7 @@ class PickerRole(Role[Optional["Player"]]):
         )
 
     @Role.listener()
+    @classmethod
     async def on_message(
         cls, ctx: RoleActionContext, state: Optional["Player"]
     ) -> Optional["Player"]:
@@ -218,7 +229,7 @@ class PickerRole(Role[Optional["Player"]]):
         return target
 
 
-class Innocent(Role):
+class Innocent(Role[None]):
     """The ordinary people of the town.
 
     This role is special in that any amount of players can have it, and that
@@ -250,6 +261,7 @@ class Mafia(PickerRole):
         return ctx.roster.alive_townies
 
     @Role.listener()
+    @classmethod
     async def on_night_end(
         cls, ctx: RoleActionContext, victim: Optional["Player"]
     ) -> None:
@@ -283,6 +295,7 @@ class Doctor(PickerRole):
     # only notify the player after end events have already taken place, so we
     # know if they got attacked or not
     @Role.listener(priority=-100)
+    @classmethod
     async def on_night_end(
         cls, ctx: RoleActionContext, target: Optional["Player"]
     ) -> None:
@@ -315,6 +328,7 @@ class Investigator(PickerRole):
     key = Key("investigator_target")
 
     @Role.listener()
+    @classmethod
     async def on_night_end(
         cls, ctx: RoleActionContext, target: Optional["Player"]
     ) -> None:
@@ -341,6 +355,7 @@ class Medium(Role[bool]):
     )
 
     @Role.listener()
+    @classmethod
     async def on_message(cls, ctx: RoleActionContext, state: bool) -> bool:
         assert ctx.message is not None
 
@@ -364,6 +379,7 @@ class Medium(Role[bool]):
         return True
 
     @Role.listener()
+    @classmethod
     async def on_night_begin(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         if state is True:
             # already seanced
@@ -376,6 +392,7 @@ class Medium(Role[bool]):
         await ctx.reply(msg(messages.PICK_PROMPT["Medium"]))
 
     @Role.listener()
+    @classmethod
     async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         if not state:
             return

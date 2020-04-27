@@ -8,18 +8,26 @@ from .permissions import HUSH_PERMS
 from .role import Mafia
 
 if TYPE_CHECKING:
+    from .game import MafiaGame
     from .role import Role
 
 
 class Player:
     """A player in a mafia game."""
 
-    def __init__(self, member: discord.Member, **kwargs) -> None:
+    def __init__(
+        self,
+        member: discord.Member,
+        *,
+        role: Type["Role[Any]"],
+        channel: Optional[discord.TextChannel] = None,
+        game: "MafiaGame",
+    ) -> None:
         #: The Discord member of this player.
         self.member = member
 
         #: The role of this player in the game.
-        self.role: Type["Role"] = kwargs.pop("role")
+        self.role = role
 
         #: The will of this player, shown to everyone upon their death.
         self.will: Optional[str] = None
@@ -28,9 +36,9 @@ class Player:
         self.alive: bool = True
 
         #: The player's personal channel.
-        self.channel: Optional[discord.TextChannel] = kwargs.get("channel")
+        self.channel = channel
 
-        self._game = kwargs.pop("game")
+        self._game = game
 
     @property
     def id(self) -> int:
@@ -63,11 +71,12 @@ class Player:
         if self.mafia:
             # prevent speaking in mafia chat
             mafia_chat = self._game.role_chats[Mafia]
-            await mafia_chat.set_permissions(
-                self.member, read_messages=True, **HUSH_PERMS
-            )
+            overwrite = discord.PermissionOverwrite(read_messages=True, **HUSH_PERMS)
+            await mafia_chat.set_permissions(self.member, overwrite=overwrite)
 
         # prevent speaking everywhere with dead role
+        assert self._game.player_role is not None
+        assert self._game.dead_role is not None
         await self.member.remove_roles(self._game.player_role)
         await self.member.add_roles(self._game.dead_role)
 
