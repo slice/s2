@@ -378,8 +378,8 @@ class MafiaGame:
         assert self.roster is not None
         assert self.all_chat is not None
 
-        await self.all_chat.send(msg(messages.NIGHT_ANNOUNCEMENT))
-        await self._lock()
+        # we have already locked back in the game loop
+        # await self._lock()
 
         # dump the previous role state
         self.memory.reset()
@@ -577,7 +577,7 @@ class MafiaGame:
 
         await self._check_game_over()
 
-        # unlock from being locked from the night
+        # unlock from being locked during night
         await self._unlock()
 
         # time to discuss + vote
@@ -602,16 +602,24 @@ class MafiaGame:
         await asyncio.sleep(5)
 
         while True:
-            # send current day/daytime state to players
-            await self.all_chat.send(
-                messages.DAY_ANNOUNCEMENT.format(
-                    emoji=(
-                        messages.DAY_EMOJI if self.daytime else messages.NIGHT_EMOJI
-                    ),
-                    time_of_day=(messages.DAY if self.daytime else messages.NIGHT),
-                    day=self.day,
-                )
+            if not self.daytime:
+                # it's night; prevent people from speaking as early as possible
+                # this will be unlocked during the day
+                await self._lock()
+
+            # send current day state to players
+            day_state = msg(
+                messages.DAY_ANNOUNCEMENT
+                if self.daytime
+                else messages.NIGHT_ANNOUNCEMENT,
+                day=self.day,
             )
+
+            if not self.daytime:
+                # need some personality
+                day_state += "\n\n" + msg(messages.NIGHT_FLAVOR)
+
+            await self.all_chat.send(day_state)
 
             self.log.info(
                 "time progression; day %d, daytime=%s", self.day, self.daytime

@@ -223,16 +223,17 @@ GAME_THROWN = (
 THEY_ROLE = "They were **{role}**."
 WAS_ROLE = "**{died}** was **{role}**."
 
-NIGHT_EMOJI = "\N{NIGHT WITH STARS}"
-DAY_EMOJI = "\N{BLACK SUN WITH RAYS}"
-DAY = "Day"
-NIGHT = "Night"
-DAY_ANNOUNCEMENT = "{emoji} **{time_of_day} {day}** {emoji}"
-
-NIGHT_ANNOUNCEMENT = [
+DAY_ANNOUNCEMENT = "\N{BLACK SUN WITH RAYS} **Day {day}** \N{BLACK SUN WITH RAYS}"
+NIGHT_ANNOUNCEMENT = "\N{NIGHT WITH STARS} **Night {day}** \N{NIGHT WITH STARS}"
+NIGHT_FLAVOR = [
     "Night time! Sleep tight, and don't let the bed bugs bite!",
     "Night time! Sleep tight, everybody!",
     "It's night! Let's all get some rest.",
+    "The moon has risen!",
+    "Time to get cozy under the covers.",
+    "Ready to brush your teeth?",
+    "Yawn.",
+    "Anybody else feeling a bit sleepy?",
 ]
 
 MAFIA_WIN = "\N{HOCHO} **Mafia win!**"
