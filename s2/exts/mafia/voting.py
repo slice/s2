@@ -318,7 +318,7 @@ class Voting:
         self.judgement_votes[player] = vote
 
         await self.all_chat.send(msg(public_message, player=player))
-        await player.member.send(msg(messages.JUDGEMENT_VOTE, judgement=vote))
+        await message.channel.send(msg(messages.JUDGEMENT_VOTE, judgement=vote))
 
     def tally_judgement_votes(self, judgement: Judgement) -> int:
         return sum(1 for vote in self.judgement_votes.values() if vote is judgement)
