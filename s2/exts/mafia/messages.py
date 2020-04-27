@@ -71,7 +71,7 @@ INVESTIGATOR_RESULT_CLEAN = [
 ]
 
 ROLE_GREETINGS = {
-    "Innocent": "**You are Innocent!** Your goal is to survive and hang the mafia.",
+    "Innocent": "**You are Innocent!** Your goal is to survive and lynch the mafia.",
     "Investigator": (
         "Hello there, **Investigator!** You will be able to visit "
         "someone's house every night and determine their suspiciousness. "
@@ -152,17 +152,44 @@ TUTORIAL = (
 )
 
 DISCUSSION_TIME_ANNOUNCEMENT = [
-    "It is now discussion time! Decide on someone to hang.",
-    "Time to discuss! Decide on a town member to hang.",
+    "It is now discussion time! Decide on someone to accuse.",
+    "Time to discuss! Who did it?",
+    "Time to discuss! Decide on a town member to accuse.",
     "Let's discuss! Will someone die today?",
 ]
 
 VOTING_TIME_ANNOUNCEMENT = (
-    "Alive town members can now vote who to hang. "
+    "Alive town members can now vote who to put on trial. "
     "To vote, type `!vote <username>` in chat. "
-    "You all have 90 seconds, and {votes} are needed to hang someone.\n\n"
-    "**Alive Players:**\n\n{players}"
+    "You all have 90 seconds, and {votes} are needed to accuse someone.\n\n"
+    "**Players:**\n\n{players}"
 )
+VOTING_TIME_STALEMATE = "A suspect couldn't be determined!"
+VOTING_TIME_TOO_MANY_TRIALS = "We have run out time today."
+PUT_ON_TRIAL = (
+    "{player}, you have been put on trial for acts of treason. What is your defense?"
+)
+JUDGEMENT_PROMPT = (
+    "Do you think {player} is guilty or innocent? "
+    "**DM me or type in your player channel** what you think "
+    "(either `!innocent` or `!guilty`). "
+    "You don't have to vote if you don't want to."
+)
+JUDGEMENT_VOTE_PUBLIC = "**{player}** has voted."
+JUDGEMENT_VOTE_CHANGE = "**{player}** has changed their vote."
+JUDGEMENT_VOTE = [
+    "Voted **{judgement}**.",
+    "Voted **{judgement}**. Were you right?",
+    "Voted **{judgement}**. But was it the right choice?",
+    "OK, voted **{judgement}**. But was it the right choice?",
+]
+JUDGEMENT_INNOCENT = "The town has determined **{player}** to be innocent."
+JUDGEMENT_TIE = "The town couldn't reach a verdict on **{player}**'s innocence."
+
+LYNCH_LAST_WORDS_PROMPT = (
+    "\N{SKULL} {player.mention}, you have been convicted. Do you have any last words?"
+)
+REST_IN_PEACE = "\N{SKULL} Rest in peace, {player}. You will be missed. \N{SKULL}"
 
 VOTING_TIME_REMAINING = [
     "**{seconds} seconds** remaining to vote!",
@@ -171,9 +198,9 @@ VOTING_TIME_REMAINING = [
     "Just **{seconds} seconds** remaining to vote!",
 ]
 
-ALREADY_VOTED_FOR = "{mention} You've already voted for {target}."
-VOTED_FOR = "**{voter}** has voted for **{target}** to be hanged."
-VOTES_ENTRY = "{mention}: {votes}"
+ALREADY_VOTED_FOR = "{mention}: You've already voted for {target}."
+VOTED_FOR = "**{voter}** has voted for **{target}** to be put on trial."
+VOTES_ENTRY = "{votes} {mention}"
 
 FOUND_DEAD = [
     "**{victim}** was unfortunately found dead in their home last night.",

@@ -3,19 +3,15 @@
 __all__ = ["MafiaGame", "MafiaGameState"]
 
 import asyncio
-import collections
 import datetime
 import enum
 import logging
-import math
 import random
 from typing import (
     AsyncGenerator,
-    DefaultDict,
     Dict,
     Optional,
     Set,
-    Tuple,
     Type,
     Union,
     Iterator,
@@ -24,7 +20,7 @@ from typing import (
 import discord
 from discord.http import Route
 import lifesaver
-from lifesaver.utils import pluralize, codeblock
+from lifesaver.utils import codeblock
 
 from . import messages
 from . import role
@@ -34,11 +30,9 @@ from .role import Role, RoleActionContext
 from .roster import Roster
 from .lobby import LobbyMenu
 from .memory import Memory, Key
-from .utils import (
-    select_player,
-    basic_command,
-)
+from .utils import basic_command
 from .formatting import mention_set, user_listing, msg
+from .voting import trial_and_judgement_loop
 
 
 class MafiaGameState(enum.Enum):
@@ -136,11 +130,6 @@ class MafiaGame:
 
         #: The current time of day.
         self.daytime = True
-
-        #: A mapping of hanging votes during the daytime.
-        #: The key is the user ID of the person to hang, while the value is the
-        #: list of users who voted for that person to be hanged.
-        self.hanging_votes: DefaultDict[int, list] = collections.defaultdict(list)
 
         #: Whether the game was thrown.
         self.thrown = False
@@ -477,15 +466,6 @@ class MafiaGame:
             msg(messages.MAFIA_GREET, flavor=msg(messages.MAFIA_GREET_FLAVOR))
         )
 
-    def _get_vote(self, voter: Player) -> Optional[int]:
-        for target_id, voter_ids in self.hanging_votes.items():
-            if voter.id in voter_ids:
-                return target_id
-        return None
-
-    def _has_voted(self, voter: Player) -> bool:
-        return self._get_vote(voter) is not None
-
     async def grant_channel_access(self, member: discord.Member) -> None:
         """Grant a member access to the channels that they need access to."""
         assert self.roster is not None
@@ -498,62 +478,6 @@ class MafiaGame:
         if player.role.grouped:
             role_channel = self.role_chats[player.role]
             await role_channel.set_permissions(member, overwrite=ALLOW)
-
-    async def _gather_hanging_votes(self) -> None:
-        assert self.all_chat is not None
-        assert self.roster is not None
-
-        def check(message: discord.Message) -> bool:
-            assert self.roster is not None
-            return (
-                message.channel == self.all_chat
-                and (player := self.roster.get_player(message.author)) is not None
-                and player.alive
-            )
-
-        while True:
-            message = await self.bot.wait_for("message", check=check)
-            author = self.roster.get_player(message.author)
-            assert author is not None
-            selector = basic_command("!vote", message.content)
-
-            if not selector:
-                continue
-
-            target = select_player(selector, self.roster.alive)
-
-            if not target or target == author:
-                await message.add_reaction(self.bot.emoji("generic.no"))
-                continue
-
-            self.log.debug("%s is voting to hang %s", message.author, target)
-
-            if (previous_vote := self._get_vote(author)) is not None:
-                if previous_vote == target.id:
-                    # voter has already voted for this person
-                    await self.all_chat.send(
-                        msg(
-                            messages.ALREADY_VOTED_FOR,
-                            voter=message.author.mention,
-                            target=target,
-                        )
-                    )
-                    continue
-
-                # remove the vote for the other person (switching votes!)
-                self.hanging_votes[previous_vote].remove(message.author.id)
-
-            self.hanging_votes[target.id].append(message.author.id)
-
-            voted = msg(messages.VOTED_FOR, voter=message.author, target=target)
-            voted += "\n\n"
-            voted += "\n".join(
-                msg(messages.VOTES_ENTRY, mention=f"<@{key}>", votes=len(value))
-                for key, value in self.hanging_votes.items()
-                if value
-            )
-
-            await self.all_chat.send(voted)
 
     async def _lock(self) -> None:
         """Prevent anyone from sending messages in the game channel."""
@@ -606,47 +530,6 @@ class MafiaGame:
         await self.alltalk()
         await asyncio.sleep(10)
 
-    def _tally_up_votes(self, votes_required: int) -> Optional[Tuple[int, int]]:
-        vote_tallies: Dict[int, int] = {
-            target_id: len(votes) for target_id, votes in self.hanging_votes.items()
-        }
-
-        vote_board = collections.OrderedDict(
-            item
-            for item in sorted(
-                vote_tallies.items(), key=lambda item: item[1], reverse=True,
-            )
-            if item[1] >= votes_required
-        )
-
-        if len(vote_board) > 1 and len(set(vote_tallies.values())) == 1:
-            # all votes were above the required threshold but were the same, tied!
-            return None
-
-        if vote_board:
-            return list(vote_board.items())[0]
-        else:
-            return None
-
-    async def _hang_with_last_words(self, player: Player) -> None:
-        """Let someone have their last words without anyone else talking."""
-        assert self.all_chat is not None
-
-        await self._lock()
-        await self.all_chat.set_permissions(player.member, send_messages=True)
-        await self.all_chat.send(
-            f"\N{SKULL} {player.mention}, you have been voted to be hanged. "
-            "Do you have any last words? You have 15 seconds."
-        )
-        await asyncio.sleep(5 if self.DEBUG else 15)
-        await self.all_chat.set_permissions(player.member, overwrite=None)
-        await player.kill()
-        await self._display_will(player)
-        await self._unlock()
-        await self.all_chat.send(
-            f"\N{SKULL} **Rest in peace, {player}. You will be missed.** \N{SKULL}"
-        )
-
     async def _display_will(
         self, player: Player, channel: discord.TextChannel = None
     ) -> None:
@@ -692,65 +575,21 @@ class MafiaGame:
             await self._update_role_listing()
             await asyncio.sleep(5)
 
-        # someone has died, check if the game can end now
         await self._check_game_over()
 
         # unlock from being locked from the night
         await self._unlock()
 
         # time to discuss + vote
-        votes_required = max(math.floor(len(self.roster.alive) / 3), 1)
-
-        # lengths
         discussion_time = 5 if self.DEBUG else 45
-        voting_time = 15 if self.DEBUG else 30
 
         await self.all_chat.send(msg(messages.DISCUSSION_TIME_ANNOUNCEMENT))
         await asyncio.sleep(discussion_time)
 
-        await self.all_chat.send(
-            msg(
-                messages.VOTING_TIME_ANNOUNCEMENT,
-                votes=pluralize(vote=votes_required),
-                players=user_listing(self.roster.alive),
-            )
-        )
+        # time to accuse and judge people
+        await trial_and_judgement_loop(self)
 
-        # begin gathering votes to hang someone
-        task = self.bot.loop.create_task(self._gather_hanging_votes())
-
-        # wait a bit
-        await asyncio.sleep(voting_time - 10)
-        await self.all_chat.send(msg(messages.VOTING_TIME_REMAINING, seconds=10))
-        await asyncio.sleep(5)
-        await self.all_chat.send(msg(messages.VOTING_TIME_REMAINING, seconds=5))
-        await asyncio.sleep(5)
-
-        task.cancel()
-
-        voted = self._tally_up_votes(votes_required)
-        self.log.info("voted: %r", voted)
-
-        if not voted:
-            await self.all_chat.send("A verdict was not reached in time. Oh well!")
-        else:
-            voted_id, voted_votes = voted
-
-            hanged = discord.utils.get(self.roster.alive, id=voted_id)
-            assert hanged is not None
-
-            # goodbye
-            await self._hang_with_last_words(hanged)
-
-            await asyncio.sleep(3)
-            await self.all_chat.send(embed=self._role_reveal(hanged))
-            await self._update_role_listing()
-            await asyncio.sleep(5)
-
-            await self._check_game_over()
-
-        # reset hanging votes
-        self.hanging_votes = collections.defaultdict(list)
+        await self._check_game_over()
 
     async def _game_loop(self) -> None:
         assert self.all_chat is not None
