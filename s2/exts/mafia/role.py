@@ -107,6 +107,18 @@ class RoleActionContext:
         return target
 
 
+def _role_listener_deco(
+    *, priority: int = 0
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """Decorate a function as a role event listener."""
+
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        func._listener_priority = priority  # type: ignore[attr-defined]
+        return func
+
+    return decorator
+
+
 class Role(abc.ABC, Generic[S]):
     """A role that a player can play in the game."""
 
@@ -151,23 +163,21 @@ class Role(abc.ABC, Generic[S]):
         *, priority: int = 0
     ) -> Callable[[Callable[..., T]], Callable[..., T]]:
         """A decorator that listens for events."""
+        return _role_listener_deco(priority=priority)
 
-        def decorator(func: Callable[..., T]) -> Callable[..., T]:
-            func._listener_priority = priority  # type: ignore[attr-defined]
-            return func
-
-        return decorator
-
+    @_role_listener_deco()
     @classmethod
     async def on_message(
         cls, ctx: RoleActionContext, state: Optional[S]
     ) -> Optional[S]:
         """Handle messages sent in the player's personal channel."""
 
+    @_role_listener_deco()
     @classmethod
     async def on_night_begin(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         """Handle the night's beginning."""
 
+    @_role_listener_deco()
     @classmethod
     async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         """Handle the night's end."""
