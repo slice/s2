@@ -190,7 +190,7 @@ class MafiaGame:
         if (player := self.roster.get_player(member)) is None:
             return
 
-        if self.thrown:
+        if player.dead or self.thrown:
             return
 
         self.thrown = True
