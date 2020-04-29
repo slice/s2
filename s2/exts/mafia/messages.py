@@ -172,7 +172,7 @@ VOTING_TIME_ANNOUNCEMENT = (
     "**Players:**\n\n{players}"
 )
 VOTING_TIME_STALEMATE = "A suspect couldn't be determined!"
-VOTING_TIME_TOO_MANY_TRIALS = "We have run out time today."
+VOTING_TIME_TOO_MANY_TRIALS = "We have run out of time today..."
 PUT_ON_TRIAL = (
     "{player}, you have been put on trial for acts of treason. What is your defense?"
 )
