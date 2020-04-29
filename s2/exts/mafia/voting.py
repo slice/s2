@@ -155,6 +155,7 @@ class Voting:
     def _msg_trial_time(self) -> str:
         return msg(
             messages.VOTING_TIME_ANNOUNCEMENT,
+            seconds=self.trial_voting_time,
             votes=pluralize(vote=self.trial_votes_required()),
             players=user_listing(self.roster.alive),
         )
