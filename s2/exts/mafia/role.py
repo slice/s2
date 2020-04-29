@@ -404,9 +404,6 @@ class Medium(Role[bool]):
     @classmethod
     @Role.listener()
     async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
-        if not state:
-            return
-
         assert (spec_chat := ctx.game.spectator_chat) is not None
 
         if ctx.player.member not in spec_chat.overwrites:
