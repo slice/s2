@@ -92,6 +92,7 @@ class MafiaGame:
 
         #: The logger.
         self.log = logging.getLogger(f"{__name__}[{self.lobby_channel.id}]")
+        self.log.setLevel(logging.DEBUG)
 
         #: The invitation message in the lobby.
         self.invite_message: Optional[discord.Message] = None
@@ -373,7 +374,7 @@ class MafiaGame:
 
         # update role state from on_message if the state has changed
         if key is not None and new_state != prev_state:
-            self.log.info("updating %r to %r", key, new_state)
+            self.log.debug("updating %r to %r", key, new_state)
             async with self._memory_lock:
                 self.memory[key] = new_state
 
@@ -403,7 +404,7 @@ class MafiaGame:
             for player in nocturnal:
                 if player.role in handled_grouped_roles or player.dead:
                     continue
-                self.log.info("%s: yielding", player)
+                self.log.debug("%s: yielding", player)
                 yield player
                 if player.role.grouped:
                     handled_grouped_roles.add(player.role)
@@ -420,7 +421,7 @@ class MafiaGame:
             # on_night_begin (we reset it above)
             state = get_state()
 
-            self.log.info(
+            self.log.debug(
                 "on_night_begin: %s (%s), state=%r", player, player.role.name, state
             )
             await player.role.on_night_begin(ctx, state)
@@ -428,18 +429,18 @@ class MafiaGame:
         # handle actions from nocturnal players, such as the mafia choosing who
         # to kill. at the end of the night, the state from these actions will
         # be "carried out".
-        self.log.info("handling nocturnal actions")
+        self.log.debug("handling nocturnal actions")
         self._handling_nocturnal_actions = True
         await asyncio.sleep(10 if self.DEBUG else 36)
         self._handling_nocturnal_actions = False
 
         # now to carry out what decisions were made during the night...
         for player in iter_nocturnal(priority_by="on_night_end"):
-            self.log.info("%s: handling end event", player)
+            self.log.debug("%s: handling end event", player)
 
             state = get_state()
             ctx = RoleActionContext(game=self, player=player)
-            self.log.info(
+            self.log.debug(
                 "on_night_end: %s (%s), state=%r", player, player.role.name, state
             )
             await player.role.on_night_end(ctx, state)
@@ -763,7 +764,7 @@ class MafiaGame:
                 overwrites={self.guild.default_role: BLOCK, self.dead_role: HUSH},
             )
 
-        self.log.info("role_chats: %r", self.role_chats)
+        self.log.debug("role_chats: %r", self.role_chats)
 
     async def start(self) -> None:
         """Gather participants and start the game."""
