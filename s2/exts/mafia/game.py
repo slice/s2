@@ -137,6 +137,9 @@ class MafiaGame:
         #: Whether the game was thrown.
         self.thrown = False
 
+        #: The lobby menu. Controls player joining and leaving, and game starting.
+        self._lobby_menu: Optional[LobbyMenu] = None
+
         #: The game loop.
         self._game_loop_task: Optional[asyncio.Task[None]] = None
 
@@ -247,7 +250,7 @@ class MafiaGame:
         """Interactively gather game participants."""
         self.log.info("creating lobby menu")
 
-        menu = LobbyMenu(game=self)
+        self._lobby_menu = menu = LobbyMenu(game=self)
         await menu.start(self._ctx, channel=self.lobby_channel, wait=True)
         await menu.message.delete()
         return not menu.was_cancelled
