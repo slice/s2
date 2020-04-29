@@ -680,10 +680,11 @@ class MafiaGame:
                 f"{player}: {player.role.name}" if show_players else player.role.name
             )
 
+            if player.dead:
+                named_entity = f"~~{named_entity}~~"
+
             line = "\N{WHITE SMALL SQUARE} " + named_entity
 
-            if player.dead:
-                return f"~~{line}~~"
             return line
 
         sorted_players = sorted(
