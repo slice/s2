@@ -18,7 +18,7 @@ def user_listing(
     """Format a list of users."""
     if commas:
         return ", ".join(map(str, users))
-    return "\n".join(f"\N{EM DASH} {user}" for user in users)
+    return "\n".join(f"\N{WHITE SMALL SQUARE} {user}" for user in users)
 
 
 def msg(message: Message, **kwargs: Any) -> str:

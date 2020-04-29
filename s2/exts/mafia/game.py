@@ -680,7 +680,7 @@ class MafiaGame:
                 f"{player}: {player.role.name}" if show_players else player.role.name
             )
 
-            line = "\N{EM DASH} " + named_entity
+            line = "\N{WHITE SMALL SQUARE} " + named_entity
 
             if player.dead:
                 return f"~~{line}~~"
