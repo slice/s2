@@ -247,7 +247,7 @@ class Voting:
 
         target = select_player(selector, self.roster.alive)
 
-        if not target or target == msg.author:
+        if not target or target.member == msg.author:
             await msg.add_reaction(self.game.bot.emoji("generic.no"))
             return
 
