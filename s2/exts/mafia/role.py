@@ -165,20 +165,20 @@ class Role(abc.ABC, Generic[S]):
         """A decorator that listens for events."""
         return _role_listener_deco(priority=priority)
 
-    @_role_listener_deco()
     @classmethod
+    @_role_listener_deco()
     async def on_message(
         cls, ctx: RoleActionContext, state: Optional[S]
     ) -> Optional[S]:
         """Handle messages sent in the player's personal channel."""
 
-    @_role_listener_deco()
     @classmethod
+    @_role_listener_deco()
     async def on_night_begin(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         """Handle the night's beginning."""
 
-    @_role_listener_deco()
     @classmethod
+    @_role_listener_deco()
     async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         """Handle the night's end."""
 
@@ -211,8 +211,8 @@ class PickerRole(Role[Optional["Player"]]):
         """Return the set of targets that can be picked from."""
         return ctx.roster.alive - {ctx.player}
 
-    @Role.listener()
     @classmethod
+    @Role.listener()
     async def on_night_begin(cls, ctx: RoleActionContext, state: None) -> None:
         if not cls.should_allow_picking(ctx):
             return
@@ -221,8 +221,8 @@ class PickerRole(Role[Optional["Player"]]):
             msg(cls.get_pick_prompt(ctx), targets=user_listing(cls.get_targets(ctx)))
         )
 
-    @Role.listener()
     @classmethod
+    @Role.listener()
     async def on_message(
         cls, ctx: RoleActionContext, state: Optional["Player"]
     ) -> Optional["Player"]:
@@ -270,8 +270,8 @@ class Mafia(PickerRole):
     def get_targets(cls, ctx: RoleActionContext) -> Set["Player"]:
         return ctx.roster.alive_townies
 
-    @Role.listener()
     @classmethod
+    @Role.listener()
     async def on_night_end(
         cls, ctx: RoleActionContext, victim: Optional["Player"]
     ) -> None:
@@ -304,8 +304,8 @@ class Doctor(PickerRole):
 
     # only notify the player after end events have already taken place, so we
     # know if they got attacked or not
-    @Role.listener(priority=-100)
     @classmethod
+    @Role.listener(priority=-100)
     async def on_night_end(
         cls, ctx: RoleActionContext, target: Optional["Player"]
     ) -> None:
@@ -337,8 +337,8 @@ class Investigator(PickerRole):
     pick_command = "!visit"
     key = Key("investigator_target")
 
-    @Role.listener()
     @classmethod
+    @Role.listener()
     async def on_night_end(
         cls, ctx: RoleActionContext, target: Optional["Player"]
     ) -> None:
@@ -364,8 +364,8 @@ class Medium(Role[bool]):
         read_messages=True, read_message_history=False
     )
 
-    @Role.listener()
     @classmethod
+    @Role.listener()
     async def on_message(cls, ctx: RoleActionContext, state: bool) -> bool:
         assert ctx.message is not None
 
@@ -388,8 +388,8 @@ class Medium(Role[bool]):
 
         return True
 
-    @Role.listener()
     @classmethod
+    @Role.listener()
     async def on_night_begin(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         if state is True:
             # already seanced
@@ -401,8 +401,8 @@ class Medium(Role[bool]):
 
         await ctx.reply(msg(messages.PICK_PROMPT["Medium"]))
 
-    @Role.listener()
     @classmethod
+    @Role.listener()
     async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
         if not state:
             return
