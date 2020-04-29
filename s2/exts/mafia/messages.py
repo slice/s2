@@ -56,26 +56,8 @@ DOCTOR_RESULT = {
     ],
 }
 
-INVESTIGATOR_RESULT_SUSPICIOUS = [
-    "You find that your target has a knife collection.",
-    "You find that the suspect is making a lot of noise.",
-    "You find that the suspect's garage is leaking red liquid.",
-    "You find that your target has a shed full of weapons.",
-    "You find that your target has a collection of voodoo dolls.",
-    "You find strange liquids oozing from your suspect's dumpster.",
-    "You discover a bear trap in your suspect's front lawn.",
-    "You discover numerous red stains near your suspect's house.",
-    "You hear ominous laughter from your suspect's house.",
-]
-
-INVESTIGATOR_RESULT_CLEAN = [
-    "You find nothing out of the ordinary with your target.",
-    "You find nothing suspicious with your target.",
-    "You find nothing strange with the suspect.",
-    "You don't find anything strange with the suspect.",
-    "You don't find anything suspicious with the suspect.",
-    "You don't find anything out of the ordinary with the suspect.",
-]
+INVESTIGATOR_RESULT_SUSPICIOUS = "Your target is suspicious."
+INVESTIGATOR_RESULT_CLEAN = "You find nothing strange with your target."
 
 ROLE_GREETINGS = {
     "Innocent": "**You are Innocent!** Your goal is to survive and lynch the mafia.",
