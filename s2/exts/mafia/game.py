@@ -177,7 +177,12 @@ class MafiaGame:
             player := self.roster.get_player(member)
         ) is not None and player.dead
 
-        if member not in self.participants or is_already_dead:
+        if is_already_dead:
+            assert self.dead_role is not None
+            await member.add_roles(self.dead_role)
+            return
+
+        if member not in self.participants:
             assert self.spectator_role is not None
             await member.add_roles(self.spectator_role)
             return
