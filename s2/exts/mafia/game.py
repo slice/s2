@@ -168,11 +168,16 @@ class MafiaGame:
         """Handle a member join."""
         assert self.guild is not None
         assert self.player_role is not None
+        assert self.roster is not None
 
         self.log.info("joined: %s (%d)", member, member.id)
 
-        if member not in self.participants:
-            # someone not in the roster joined, give spectator role
+        # check if this member is actually a player, but they have already died
+        is_already_dead = (
+            player := self.roster.get_player(member)
+        ) is not None and player.dead
+
+        if member not in self.participants or is_already_dead:
             assert self.spectator_role is not None
             await member.add_roles(self.spectator_role)
             return
