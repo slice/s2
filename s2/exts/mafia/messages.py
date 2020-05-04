@@ -60,7 +60,7 @@ INVESTIGATOR_RESULT_SUSPICIOUS = "Your target is suspicious."
 INVESTIGATOR_RESULT_CLEAN = "You find nothing strange with your target."
 
 ROLE_GREETINGS = {
-    "Innocent": "**You are Innocent!** Your goal is to survive and lynch the mafia.",
+    "Innocent": "**You are Innocent!** Your goal is to survive and hang the mafia.",
     "Investigator": (
         "Hello there, **Investigator!** You will be able to visit "
         "someone's house every night and determine their suspiciousness. "
@@ -135,7 +135,7 @@ GAME_START = [
 TUTORIAL = (
     "**Welcome to the game, everybody!**\n\n"
     "There are {mafia_n} mafia hiding within a town of innocents. "
-    "**If you are an innocent,** your goal is to lynch the mafia. "
+    "**If you are an innocent,** your goal is to hang the mafia. "
     "**If you are a mafia,** your goal is to work with your partner to wipe "
     "out the innocents before they find out about you!"
 )
