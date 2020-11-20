@@ -8,7 +8,7 @@ import lifesaver
 from discord.ext import commands
 from lifesaver.utils import human_delta, pluralize
 
-from .checks import get_channel
+from .checks import get_zone_only
 from .config import GetsConfig
 from .database import GetsDatabase
 from .strings import GAME_INFO, LEADERBOARD_MEDALS, COLORS
@@ -138,7 +138,7 @@ class Gets(lifesaver.Cog):
             await self.prime_get(msg)
             return
 
-        if msg.channel.id not in self.config.channels:
+        if msg.channel.id not in self.config.get_channels:
             return
 
         async with self.locks[msg.guild.id]:
@@ -149,7 +149,7 @@ class Gets(lifesaver.Cog):
             del self.pending_gets[msg.guild.id]
 
     @lifesaver.group(aliases=["g"], hollow=True)
-    @commands.check(get_channel)
+    @commands.check(get_zone_only)
     async def gets(self, ctx):
         """mary consumed my arteries"""
 
@@ -222,6 +222,8 @@ class Gets(lifesaver.Cog):
     @commands.is_owner()
     async def sink(self, ctx, target: discord.Member):
         """Deletes all of someone's GETs"""
+        await ctx.invoke(self.write, target, 0)
+        await self.write.invoke()
         async with self.global_transaction_lock:
             await self.db.set_gets(target, 0)
             await self.bot.db.commit()
