@@ -15,6 +15,7 @@ from .strings import GAME_INFO, LEADERBOARD_MEDALS, COLORS
 from .waiting import wait_for_n_messages
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)  # >:O
 
 
 @lifesaver.Cog.with_config(GetsConfig)
@@ -45,7 +46,7 @@ class Gets(lifesaver.Cog):
         """Process an earned GET from a message."""
         assert msg.guild is not None
 
-        log.debug("processing get grab (message: %r)", msg)
+        log.debug("Processing earned GET (message: %d, obtainer: %d)", msg.id, msg.author.id)
 
         async with self.global_transaction_lock:
             account = await self.db.ensure_account(msg.author)
@@ -80,9 +81,10 @@ class Gets(lifesaver.Cog):
 
             await self.bot.db.commit()
             log.debug(
-                "committed get grab to database (target: %r, new_total: %d)",
-                msg.author,
+                "Committed GET to database (obtainer: %r, new_total: %d, gets_earned: %d)",
+                msg.author.id,
                 new_total,
+                gets_earned
             )
 
         win_message = f"{new_total:,}"
@@ -104,7 +106,7 @@ class Gets(lifesaver.Cog):
         if await wait_for_n_messages(
             self.bot, msg.channel, messages=1, timeout=3, check=other_message_check
         ):
-            log.debug("elaborating get earner (notice: %r)", notice)
+            log.debug("Elaborating GET obtainer (notice: %r)", notice)
             await notice.edit(content=f"{msg.author.name}  \xb7  {win_message}")
 
     def is_prohibited(self, msg: discord.Message) -> bool:
@@ -124,6 +126,7 @@ class Gets(lifesaver.Cog):
 
     async def prime_get(self, msg: discord.Message) -> None:
         if self.is_prohibited(msg):
+            log.debug('Message %d is prohibited from GETs', msg.id)
             try:
                 await msg.add_reaction("\N{no entry sign}")
             except discord.HTTPException:
@@ -131,6 +134,7 @@ class Gets(lifesaver.Cog):
             return
 
         self.pending_gets[msg.guild.id].append(msg)
+        log.debug('Primed message %d from webhook %d for a GET', msg.id, msg.webhook_id)
 
     @lifesaver.Cog.listener()
     async def on_message(self, msg):
@@ -142,11 +146,17 @@ class Gets(lifesaver.Cog):
             return
 
         async with self.locks[msg.guild.id]:
-            if msg.author.bot or msg.guild.id not in self.pending_gets:
+            if msg.author.bot:
+                log.debug('Ignoring GET-collecting message %d, from a bot', msg.id)
+                return
+
+            if msg.guild.id not in self.pending_gets:
+                log.debug('Ignoring message %d, there are no pending GETs in guild %d', msg.id, msg.guild.id)
                 return
 
             await self.process_get(msg)
             del self.pending_gets[msg.guild.id]
+            log.info('Finished processing GET from message %d in guild %d', msg, msg.guild.id)
 
     @lifesaver.group(aliases=["g"], hollow=True)
     @commands.check(get_zone_only)
