@@ -126,7 +126,7 @@ class Gets(lifesaver.Cog):
 
     async def prime_get(self, msg: discord.Message) -> None:
         if self.is_prohibited(msg):
-            log.debug('Message %d is prohibited from GETs', msg.id)
+            log.debug("Not going to prime message %d, it's prohibited from GETs", msg.id)
             try:
                 await msg.add_reaction("\N{no entry sign}")
             except discord.HTTPException:
@@ -134,7 +134,7 @@ class Gets(lifesaver.Cog):
             return
 
         self.pending_gets[msg.guild.id].append(msg)
-        log.debug('Primed message %d from webhook %d for a GET', msg.id, msg.webhook_id)
+        log.debug('Primed message %d in guild %d from webhook %d for a GET', msg.id, msg.guild.id, msg.webhook_id)
 
     @lifesaver.Cog.listener()
     async def on_message(self, msg):
