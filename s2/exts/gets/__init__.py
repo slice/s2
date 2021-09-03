@@ -138,14 +138,14 @@ class Gets(lifesaver.Cog):
 
     @lifesaver.Cog.listener()
     async def on_message(self, msg):
-        if msg.webhook_id in self.config.webhooks:
-            await self.prime_get(msg)
-            return
-
         if msg.channel.id not in self.config.get_channels:
             return
 
         async with self.locks[msg.guild.id]:
+            if msg.webhook_id in self.config.webhooks:
+                await self.prime_get(msg)
+                return
+
             if msg.author.bot:
                 log.debug('Ignoring GET-collecting message %d, from a bot', msg.id)
                 return
