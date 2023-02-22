@@ -11,6 +11,7 @@ from typing import (
 
 import discord
 from discord.ext import commands
+from discord.ext.commands._types import BotT
 
 import lifesaver
 from lifesaver.utils.formatting import Table, codeblock
@@ -18,6 +19,35 @@ from lifesaver.utils.formatting import Table, codeblock
 from .game import MafiaGame
 
 Listener = Callable[..., Coroutine[Any, Any, None]]
+
+
+class GameConverter(commands.Converter[MafiaGame]):
+    async def convert(self, ctx: commands.Context[BotT], argument: str) -> MafiaGame:
+        try:
+            lobby_channel_id = int(argument)
+            game = cast(Mafia, ctx.bot.get_cog("Mafia")).sessions.get(lobby_channel_id)
+            if game is None:
+                raise commands.BadArgument(
+                    f"Cannot find a Mafia game with that lobby channel ID."
+                )
+            return game
+        except ValueError:
+            raise commands.BadArgument("Lobby channel ID was not numeric.")
+
+
+async def _default_mafia_game(ctx: lifesaver.Context) -> MafiaGame:
+    cog = cast(Mafia, ctx.bot.get_cog("Mafia"))
+    if (game := cog.get_game(ctx)) is None:
+        raise commands.BadArgument("Unable to infer a Mafia game in this context.")
+    return game
+
+
+InferGame = commands.parameter(
+    converter=GameConverter,
+    default=_default_mafia_game,
+    description="The Mafia game",
+    displayed_default="infer the game from context",
+)
 
 
 class Mafia(lifesaver.Cog):
@@ -202,13 +232,10 @@ class Mafia(lifesaver.Cog):
 
     @mafia.group(name="debug", invoke_without_command=True)
     @commands.is_owner()
-    @commands.guild_only()
-    async def mafia_debug(self, ctx: lifesaver.Context) -> None:
-        """Debugs mafia state"""
-        if (game := self.get_game(ctx)) is None:
-            await ctx.send("no game found?")
-            return
-
+    async def mafia_debug(
+        self, ctx: lifesaver.Context, game: MafiaGame = InferGame
+    ) -> None:
+        """Reveal game state"""
         if (roster := game.roster) is None:
             await ctx.send("game hasn't started yet?")
             return
@@ -230,26 +257,46 @@ class Mafia(lifesaver.Cog):
 
         await ctx.send(codeblock(debug_info))
 
+    @mafia_debug.command(name="forcejoin", aliases=["fj"], invoke_without_command=True)
+    @commands.is_owner()
+    async def mafia_forcejoin(
+        self, ctx: lifesaver.Context, user_id: int, game: MafiaGame = InferGame
+    ) -> None:
+        """Forcibly adds someone to a lobby"""
+        user = await ctx.bot.fetch_user(user_id)
+        game.participants.add(user)
+        await game._lobby_menu._update_embed()
+        await ctx.send(f"{ctx.tick()} Forcibly added {user} to the lobby.")
+
     @mafia_debug.command(name="clean")
     @commands.is_owner()
     async def mafia_debug_clean(self, ctx: lifesaver.Context) -> None:
-        """Deletes any guilds created for Mafia games"""
+        """Deletes any created Mafia guilds"""
         for guild in ctx.bot.guilds:
             if "mafia " in guild.name and guild.owner == ctx.bot.user:
                 await guild.delete()
         await ctx.ok()
 
+    @mafia_debug.command(name="stop")
+    @commands.is_owner()
+    async def mafia_debug_stop(
+        self, ctx: lifesaver.Context, game: MafiaGame = InferGame
+    ) -> None:
+        """Immediately ceases gameplay"""
+        if (task := game._game_loop_task) is None:
+            await game.game_over()
+        else:
+            task.cancel()
+        await ctx.ok()
+
     @mafia_debug.command(name="admin")
     @commands.is_owner()
-    @commands.guild_only()
-    async def mafia_debug_admin(self, ctx: lifesaver.Context) -> None:
-        """Gives you admin"""
-        if (game := self.get_game(ctx)) is None:
-            await ctx.send("no game found?")
-            return
-
+    async def mafia_debug_admin(
+        self, ctx: lifesaver.Context, game: MafiaGame = InferGame
+    ) -> None:
+        """Enable administrator privileges"""
         if (guild := game.guild) is None:
-            await ctx.send("game area not found?")
+            await ctx.send("Game area not found.")
             return
 
         permissions = discord.Permissions(administrator=True)
@@ -262,21 +309,19 @@ class Mafia(lifesaver.Cog):
 
     @mafia_debug.command(name="slay")
     @commands.is_owner()
-    @commands.guild_only()
     async def mafia_debug_slay(
-        self, ctx: lifesaver.Context, target: discord.Member
+        self,
+        ctx: lifesaver.Context,
+        target: discord.Member,
+        game: MafiaGame = InferGame,
     ) -> None:
         """Slays a player"""
-        if (game := self.get_game(ctx)) is None:
-            await ctx.send("no game found?")
-            return
-
         if (roster := game.roster) is None:
-            await ctx.send("game hasn't started yet?")
+            await ctx.send("Game doesn't have a roster yet.")
             return
 
         if (player := roster.get_player(target)) is None:
-            await ctx.send("cannot find player")
+            await ctx.send("Can't find that player.")
             return
 
         await player.kill()
