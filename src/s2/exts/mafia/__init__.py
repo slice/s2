@@ -81,7 +81,7 @@ class Mafia(lifesaver.Cog):
     on_member_join = _passthrough_event("on_member_join")
     on_member_remove = _passthrough_event("on_member_remove")
 
-    @lifesaver.group(hidden=True, invoke_without_command=True)
+    @lifesaver.group(invoke_without_command=True)
     @commands.guild_only()
     async def mafia(self, ctx: lifesaver.Context) -> None:
         """Creates a Mafia lobby
@@ -283,5 +283,5 @@ class Mafia(lifesaver.Cog):
         await ctx.ok()
 
 
-def setup(bot: lifesaver.Bot) -> None:
-    bot.add_cog(Mafia(bot))
+async def setup(bot: lifesaver.Bot) -> None:
+    await bot.add_cog(Mafia(bot))

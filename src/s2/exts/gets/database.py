@@ -1,13 +1,13 @@
 __all__ = ["GetsDatabase"]
 
 import datetime
-import typing as T
+from typing import Optional
 
 import aiosqlite
 import lifesaver
 import discord
 
-Person = T.Union[discord.User, discord.Member]
+Person = discord.User | discord.Member
 
 
 class GetsDatabase:
@@ -15,10 +15,10 @@ class GetsDatabase:
         self.bot = bot
 
     @property
-    def db(self):
-        return self.bot.db
+    def db(self) -> aiosqlite.Connection:
+        return self.bot.db  # type: ignore
 
-    async def get_top_getters(self, n: int) -> T.List[aiosqlite.Row]:
+    async def get_top_getters(self, n: int) -> list[aiosqlite.Row]:
         """Fetch the top GETters."""
         async with self.db.execute(
             """
@@ -29,9 +29,9 @@ class GetsDatabase:
             """,
             [n],
         ) as cur:
-            return await cur.fetchall()
+            return list(await cur.fetchall())
 
-    async def fetch_account(self, user: Person) -> aiosqlite.Row:
+    async def fetch_account(self, user: Person) -> Optional[aiosqlite.Row]:
         """Fetch account information for a user."""
         async with self.db.execute(
             """
@@ -55,7 +55,9 @@ class GetsDatabase:
             return account
         else:
             await self.create_account(user)
-            return await self.fetch_account(user)
+            new_account = await self.fetch_account(user)
+            assert new_account is not None
+            return new_account
 
     async def set_gets(self, user: Person, amount: int) -> None:
         """Set a user's total GET count."""

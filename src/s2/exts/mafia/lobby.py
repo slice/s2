@@ -37,7 +37,7 @@ class LobbyMenu(menus.Menu):  # type: ignore
             title="Mafia Lobby", description=players_listing, color=discord.Color.red()
         )
         embed.set_author(
-            name=str(self.game.creator), icon_url=self.game.creator.avatar_url
+            name=str(self.game.creator), icon_url=str(self.game.creator.avatar)
         )
 
         if (still_needed := self._still_needed()) > 0:

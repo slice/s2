@@ -59,7 +59,7 @@ class House(lifesaver.Cog):
         await ctx.ok()
 
     async def steal_avatar(self, member):
-        avatar = member.avatar_url_as(format="png", size=256)
+        avatar = member.avatar.replace(format="png", size=256)
         with BytesIO() as avatar_buffer:
             await avatar.save(avatar_buffer, seek_begin=True)
             flipped = await flip_avatar(avatar_buffer)
@@ -83,7 +83,7 @@ class House(lifesaver.Cog):
 
     async def update_guild_icon(self, slice):
         """Update the guild icon to slice's avatar"""
-        avatar = slice.avatar_url_as(format="png", size=256)
+        avatar = slice.avatar.replace(format="png", size=256)
         await self.house.edit(
             icon=await avatar.read(), reason="slice changed his avatar"
         )
@@ -110,5 +110,5 @@ class House(lifesaver.Cog):
         await self.steal_avatar(after)
 
 
-def setup(bot):
-    bot.add_cog(House(bot))
+async def setup(bot):
+    await bot.add_cog(House(bot))

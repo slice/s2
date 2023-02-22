@@ -5,7 +5,7 @@ from typing import Optional, Type, Any, TYPE_CHECKING
 import discord
 
 from .permissions import HUSH_PERMS
-from .role import Mafia
+from .role import Mafia, Investigator
 
 if TYPE_CHECKING:
     from .game import MafiaGame
@@ -54,6 +54,11 @@ class Player:
     def mafia(self) -> bool:
         """Check if the player has the ``Mafia`` role."""
         return self.role is Mafia
+
+    @property
+    def suspicious(self) -> bool:
+        """Return whether the player is considered to be "suspicious"."""
+        return self.mafia or self.role is Investigator
 
     @property
     def dead(self) -> bool:

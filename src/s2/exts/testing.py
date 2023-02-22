@@ -1,13 +1,9 @@
 import asyncio
-import random
 
-import discord
 import lifesaver
-import jishaku
-from discord.ext import commands
 
 
-class Testing(lifesaver.Cog, command_attrs=dict(hidden=True)):
+class Testing(lifesaver.Cog, command_attrs={"hidden": True}):
     @lifesaver.command()
     async def simple_pagination(self, ctx: lifesaver.Context):
         ctx.add_line("one")
@@ -28,5 +24,5 @@ class Testing(lifesaver.Cog, command_attrs=dict(hidden=True)):
             await asyncio.sleep(1)
 
 
-def setup(bot):
-    bot.add_cog(Testing(bot))
+async def setup(bot):
+    await bot.add_cog(Testing(bot))

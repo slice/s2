@@ -25,7 +25,7 @@ async def wait_for_n_messages(
                 return
 
     try:
-        await asyncio.wait_for(message_counter(), timeout=timeout, loop=bot.loop)
+        await asyncio.wait_for(message_counter(), timeout=timeout)
     except asyncio.TimeoutError:
         return False
 

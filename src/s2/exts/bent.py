@@ -30,5 +30,5 @@ class Bent(lifesaver.Cog):
         await self._report_bending(guild, user, type="unbent")
 
 
-def setup(bot):
-    bot.add_cog(Bent(bot))
+async def setup(bot):
+    await bot.add_cog(Bent(bot))

@@ -347,7 +347,7 @@ class Investigator(PickerRole):
 
         message = (
             messages.INVESTIGATOR_RESULT_SUSPICIOUS
-            if target.mafia
+            if target.suspicious
             else messages.INVESTIGATOR_RESULT_CLEAN
         )
 
@@ -390,7 +390,9 @@ class Medium(Role[bool]):
 
     @classmethod
     @Role.listener()
-    async def on_night_begin(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
+    async def on_night_begin(
+        cls, ctx: RoleActionContext, state: Optional[bool]
+    ) -> None:
         if state is True:
             # already seanced
             return
@@ -403,7 +405,7 @@ class Medium(Role[bool]):
 
     @classmethod
     @Role.listener()
-    async def on_night_end(cls, ctx: RoleActionContext, state: Optional[S]) -> None:
+    async def on_night_end(cls, ctx: RoleActionContext, state: Optional[bool]) -> None:
         assert (spec_chat := ctx.game.spectator_chat) is not None
 
         if ctx.player.member not in spec_chat.overwrites:
